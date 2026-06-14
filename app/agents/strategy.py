@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..schemas import CalendarEntry, ContentIdea, ContentStrategy, ResearchBrief
+from ..settings import get_settings
 from .base import BaseAgent
 
 
@@ -15,6 +16,11 @@ class StrategyAgent(BaseAgent[ContentStrategy]):
     name = "strategy"
     role = "Content Strategy — pillars, cadence & ideas"
     output_model = ContentStrategy
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # In fast mode, the strategy call (the cycle's main bottleneck) uses Haiku too.
+        self.fast = get_settings().byf_fast_content
 
     def expertise(self) -> str:
         return (
