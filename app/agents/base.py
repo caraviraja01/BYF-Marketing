@@ -22,7 +22,6 @@ class BaseAgent(Generic[OutT]):
     role: str = ""           # one-line description shown in the UI / logs
     output_model: type[BaseModel]
     fast: bool = False       # use the cheaper model for high-volume agents
-    temperature: float = 0.7
     max_tokens: int = 4096
 
     def __init__(self, brand: BrandProfile | None = None, llm: LLMClient | None = None) -> None:
@@ -59,7 +58,6 @@ class BaseAgent(Generic[OutT]):
             system=self.system_prompt(),
             user=self.build_user_prompt(**inputs),
             fast=self.fast,
-            temperature=self.temperature,
             max_tokens=self.max_tokens,
         )
         return self.output_model.model_validate(raw)  # type: ignore[return-value]

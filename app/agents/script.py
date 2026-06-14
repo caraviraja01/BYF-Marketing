@@ -15,7 +15,6 @@ class ScriptAgent(BaseAgent[Script]):
     name = "script"
     role = "Scriptwriting — platform-native copy"
     output_model = Script
-    temperature = 0.8
 
     def expertise(self) -> str:
         return (

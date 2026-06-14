@@ -17,7 +17,6 @@ class AnalyticsAgent(BaseAgent[AnalyticsInsight]):
     role = "Analytics — traction tracking & optimisation"
     output_model = AnalyticsInsight
     fast = True
-    temperature = 0.4
 
     def expertise(self) -> str:
         return (

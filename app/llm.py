@@ -43,7 +43,6 @@ class LLMClient:
         user: str,
         fast: bool = False,
         max_tokens: int = 4096,
-        temperature: float = 0.7,
     ) -> dict[str, Any]:
         """Call Claude and parse a JSON object from the response.
 
@@ -53,10 +52,11 @@ class LLMClient:
         if not self.enabled:
             raise LLMError("LLM disabled (no ANTHROPIC_API_KEY); use the agent mock path.")
 
+        # Note: `temperature` is intentionally not sent — the latest Claude models
+        # deprecate it. Add it back per-model only if you target an older model.
         resp = self._client.messages.create(  # type: ignore[union-attr]
             model=self.model_for(fast=fast),
             max_tokens=max_tokens,
-            temperature=temperature,
             system=system,
             messages=[{"role": "user", "content": user}],
         )

@@ -15,7 +15,6 @@ class StrategyAgent(BaseAgent[ContentStrategy]):
     name = "strategy"
     role = "Content Strategy — pillars, cadence & ideas"
     output_model = ContentStrategy
-    temperature = 0.65
 
     def expertise(self) -> str:
         return (

@@ -18,7 +18,6 @@ class VerificationAgent(BaseAgent[VerificationResult]):
     role = "Verification — brand, platform & financial compliance"
     output_model = VerificationResult
     fast = True
-    temperature = 0.2
 
     def expertise(self) -> str:
         return (

@@ -6,10 +6,13 @@ import tempfile
 
 import pytest
 
-# Point the DB at a throwaway file before app modules read settings.
+# Configure the environment BEFORE app modules read settings.
+# Tests must run in mock mode (no real API calls) and against a throwaway DB.
+# An empty env var overrides any value in a local .env file (env > .env in
+# pydantic-settings), so the suite is deterministic even when .env has a key.
 _TMP = tempfile.mkdtemp()
 os.environ["BYF_DB_URL"] = f"sqlite:///{_TMP}/test.db"
-os.environ.pop("ANTHROPIC_API_KEY", None)  # force mock mode
+os.environ["ANTHROPIC_API_KEY"] = ""  # force mock mode regardless of .env
 
 from app.agents import (  # noqa: E402
     AnalyticsAgent,

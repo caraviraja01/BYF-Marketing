@@ -17,7 +17,6 @@ class CreativeAgent(BaseAgent[CreativeAsset]):
     name = "creative"
     role = "Creative — on-brand visuals via Canva"
     output_model = CreativeAsset
-    temperature = 0.7
 
     def __init__(self, *args: Any, canva: CanvaConnector | None = None, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)

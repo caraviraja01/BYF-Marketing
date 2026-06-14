@@ -16,7 +16,6 @@ class ResearchAgent(BaseAgent[ResearchBrief]):
     role = "Market Research — trends & competitor analysis"
     output_model = ResearchBrief
     fast = True
-    temperature = 0.6
 
     def expertise(self) -> str:
         return (
