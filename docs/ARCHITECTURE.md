@@ -53,10 +53,15 @@ PipelineRun
 
 ## Model choice
 
-`BYF_MODEL` (default `claude-opus-4-8`) drives the reasoning-heavy agents
+`BYF_MODEL` (default `claude-sonnet-4-6`) drives the reasoning-heavy agents
 (strategy, script, creative). `BYF_FAST_MODEL` (default
 `claude-haiku-4-5-20251001`) drives the high-volume / low-creativity agents
 (research, verify) via the `fast = True` flag on those agents.
+
+Agents use Claude **tool-calling** for structured output (the model "calls" a tool
+whose input is the Pydantic schema), so results are guaranteed-valid JSON rather than
+fragile text parsing — and `BaseAgent` retries a few times if a response is malformed.
+Sonnet 4.6 / Haiku 4.5 produce clean tool output reliably.
 
 ## Extending
 

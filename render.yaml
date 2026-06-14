@@ -36,7 +36,7 @@ services:
       - key: BYF_SECRET_KEY
         generateValue: true
       - key: BYF_MODEL
-        value: claude-opus-4-8
+        value: claude-sonnet-4-6
       - key: BYF_FAST_MODEL
         value: claude-haiku-4-5-20251001
       - key: BYF_DB_URL

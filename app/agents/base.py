@@ -6,15 +6,24 @@ The base handles the Claude call, JSON parsing, and validation into a typed sche
 """
 from __future__ import annotations
 
-import json
+import logging
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from ..brand import BrandProfile, load_brand
-from ..llm import LLMClient, get_llm
+from ..llm import LLMClient, LLMError, get_llm
 
 OutT = TypeVar("OutT", bound=BaseModel)
+log = logging.getLogger("byf.agents")
+
+
+def _looks_malformed(raw: Any) -> bool:
+    """Detect the intermittent case where the model leaks its raw tool-call markup
+    (e.g. '</parameter>', '</invoke>') into a string field instead of returning
+    clean structured data."""
+    text = repr(raw)
+    return "</parameter>" in text or "</invoke>" in text or "<invoke" in text
 
 
 class BaseAgent(Generic[OutT]):
@@ -22,7 +31,9 @@ class BaseAgent(Generic[OutT]):
     role: str = ""           # one-line description shown in the UI / logs
     output_model: type[BaseModel]
     fast: bool = False       # use the cheaper model for high-volume agents
-    max_tokens: int = 4096
+    # Generous ceiling so rich outputs (strategy calendars, 3-variant sets) are never
+    # truncated mid-JSON. It's an upper bound — only actual output tokens are billed.
+    max_tokens: int = 8192
 
     def __init__(self, brand: BrandProfile | None = None, llm: LLMClient | None = None) -> None:
         self.brand = brand or load_brand()
@@ -41,23 +52,37 @@ class BaseAgent(Generic[OutT]):
 
     # ── Shared machinery ───────────────────────────────────────────────────────
     def system_prompt(self) -> str:
-        schema = json.dumps(self.output_model.model_json_schema(), indent=2)
         return (
             f"{self.expertise()}\n\n"
             f"=== BRAND PROFILE (Beyond Your Finance) ===\n"
             f"{self.brand.as_prompt_context()}\n\n"
-            f"=== OUTPUT FORMAT ===\n"
-            f"Respond with a SINGLE valid JSON object only — no prose, no markdown "
-            f"fences. It must conform to this JSON schema:\n{schema}"
+            f"=== OUTPUT ===\n"
+            f"Return your answer by calling the `emit_result` tool with arguments that "
+            f"match its schema exactly. Do not write any prose outside the tool call."
         )
+
+    max_retries: int = 3  # the model occasionally returns malformed structured output
 
     def run(self, **inputs: Any) -> OutT:
         if not self.llm.enabled:
             return self.mock(**inputs)  # type: ignore[return-value]
-        raw = self.llm.generate_json(
-            system=self.system_prompt(),
-            user=self.build_user_prompt(**inputs),
-            fast=self.fast,
-            max_tokens=self.max_tokens,
-        )
-        return self.output_model.model_validate(raw)  # type: ignore[return-value]
+
+        system = self.system_prompt()
+        user = self.build_user_prompt(**inputs)
+        schema = self.output_model.model_json_schema()
+        last_error: Exception | None = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                raw = self.llm.generate_json(
+                    system=system, user=user, schema=schema,
+                    fast=self.fast, max_tokens=self.max_tokens,
+                )
+                if _looks_malformed(raw):
+                    raise ValueError("structured output looks malformed (tag/format leak)")
+                return self.output_model.model_validate(raw)  # type: ignore[return-value]
+            except (ValidationError, ValueError, LLMError) as exc:
+                last_error = exc
+                log.warning("%s: attempt %d/%d failed (%s); retrying",
+                            self.name, attempt, self.max_retries, type(exc).__name__)
+        assert last_error is not None
+        raise last_error

@@ -41,12 +41,17 @@ class LLMClient:
         *,
         system: str,
         user: str,
+        schema: dict[str, Any] | None = None,
         fast: bool = False,
         max_tokens: int = 4096,
     ) -> dict[str, Any]:
-        """Call Claude and parse a JSON object from the response.
+        """Get structured JSON back from Claude.
 
-        The system prompt should instruct the model to reply with JSON only.
+        When a JSON ``schema`` is given we use tool-calling (``tool_choice`` forces
+        the model to "call" a tool whose input is the schema), so the result is
+        guaranteed-valid JSON — no fragile text parsing. Falls back to parsing text
+        if no schema is provided.
+
         Raises :class:`LLMError` in mock mode — callers must guard with ``enabled``.
         """
         if not self.enabled:
@@ -54,12 +59,29 @@ class LLMClient:
 
         # Note: `temperature` is intentionally not sent — the latest Claude models
         # deprecate it. Add it back per-model only if you target an older model.
-        resp = self._client.messages.create(  # type: ignore[union-attr]
+        kwargs: dict[str, Any] = dict(
             model=self.model_for(fast=fast),
             max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": user}],
         )
+        if schema is not None:
+            kwargs["tools"] = [
+                {
+                    "name": "emit_result",
+                    "description": "Return the final structured result for this task.",
+                    "input_schema": schema,
+                }
+            ]
+            kwargs["tool_choice"] = {"type": "tool", "name": "emit_result"}
+
+        resp = self._client.messages.create(**kwargs)  # type: ignore[union-attr]
+
+        if schema is not None:
+            for block in resp.content:
+                if getattr(block, "type", None) == "tool_use" and block.name == "emit_result":
+                    return dict(block.input)  # already-parsed, schema-shaped JSON
+            # Fall through to text parsing if the model didn't use the tool.
         text = "".join(block.text for block in resp.content if block.type == "text")
         return _parse_json(text)
 

@@ -14,9 +14,10 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    # Claude
+    # Claude. Sonnet 4.6 is the default: reliable structured (tool) output, strong
+    # quality, lower cost. Haiku 4.5 handles the high-volume/low-creativity agents.
     anthropic_api_key: str | None = None
-    byf_model: str = "claude-opus-4-8"
+    byf_model: str = "claude-sonnet-4-6"
     byf_fast_model: str = "claude-haiku-4-5-20251001"
 
     # App

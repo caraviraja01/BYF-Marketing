@@ -16,6 +16,7 @@ class ScriptAgent(BaseAgent[ScriptSet]):
     role = "Scriptwriting — platform-native copy"
     output_model = ScriptSet
     n_variants = 3
+    max_tokens = 8192  # three full scripts in one response
 
     def expertise(self) -> str:
         return (

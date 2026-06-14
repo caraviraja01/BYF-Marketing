@@ -19,6 +19,7 @@ class CreativeAgent(BaseAgent[CreativeSet]):
     role = "Creative — on-brand visuals via Canva & Higgsfield"
     output_model = CreativeSet
     n_variants = 3
+    max_tokens = 8192  # three creative concepts in one response
 
     def __init__(
         self,
