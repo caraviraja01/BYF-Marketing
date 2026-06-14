@@ -8,29 +8,46 @@
   {% block head %}{% endblock %}
 </head>
 <body>
-  <header class="topbar">
+<div class="app">
+  <aside class="sidebar">
     <a class="brand" href="/">
       <span class="logo">BYF</span>
-      <span>{{ brand.name }} · Marketing Automation</span>
+      <span class="brand-name">Beyond Your Finance</span>
     </a>
-    <nav>
-      <a href="/">Dashboard</a>
-      {% if llm_enabled %}
-        <span class="badge live">● Live (Claude)</span>
+
+    <a class="new-run-btn" href="/#new">+ New cycle</a>
+
+    <div class="side-section-label">History</div>
+    <nav class="run-history">
+      {% if not sidebar_runs %}
+        <p class="muted small empty">No cycles yet.</p>
       {% else %}
-        <span class="badge mock" title="Set ANTHROPIC_API_KEY to enable real generation">● Mock mode</span>
-      {% endif %}
-      {% if auth_enabled %}
-        <form method="post" action="/logout" class="logout-form"><button type="submit" class="btn">Log out</button></form>
+        {% for r in sidebar_runs %}
+          <a class="run-link {% if active_run_id == r.id %}active{% endif %}" href="/runs/{{ r.id }}">
+            <span class="dot {{ r.status.value }}"></span>
+            <span class="run-link-body">
+              <span class="run-link-title">{{ r.topic or 'Cycle #' ~ r.id }}</span>
+              <span class="run-link-meta">#{{ r.id }} · {{ r.created_at.strftime('%b %d, %H:%M') }}</span>
+            </span>
+          </a>
+        {% endfor %}
       {% endif %}
     </nav>
-  </header>
-  <main class="container">
+
+    <div class="sidebar-foot">
+      {% if llm_enabled %}<span class="badge live">● Live</span>
+      {% else %}<span class="badge mock">● Mock</span>{% endif %}
+      {% if auth_enabled %}
+        <form method="post" action="/logout"><button class="linkbtn" type="submit">Log out</button></form>
+      {% endif %}
+    </div>
+  </aside>
+
+  <main class="main">
     {% block content %}{% endblock %}
   </main>
-  <footer class="foot">
-    Educational content workflow · Human approval required before publishing.
-  </footer>
+</div>
+
   <script>
     // Lightweight tabs: <div class="tabs"> with .tab buttons (data-target) + .tab-panel by id.
     document.querySelectorAll('.tabs').forEach(function (group) {

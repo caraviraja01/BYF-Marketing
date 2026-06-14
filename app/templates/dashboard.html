@@ -2,15 +2,21 @@
 {% block title %}Dashboard · BYF Marketing{% endblock %}
 {% block content %}
 
-<section class="hero">
+<div class="hero">
   <div>
-    <h1>Marketing pipeline</h1>
-    <p class="muted">Research → Strategy → Script → Creative → Verify → <strong>your review</strong> → Publish → Analytics</p>
+    <p class="eyebrow">Marketing Automation</p>
+    <h1>Your AI marketing pipeline</h1>
+    <p class="flow">Research → Strategy → Script → Creative → Verify → <strong>your review</strong> → Publish → Analytics</p>
   </div>
+</div>
+
+<section class="card highlight" id="new">
+  <h2>Start a new cycle</h2>
   <form method="post" action="/runs" class="run-form">
     <input type="text" name="topic" placeholder="Seed topic (optional) — e.g. investor-ready financials, GST for SMEs" />
-    <button type="submit" class="btn primary">▶ Run a new cycle</button>
+    <button type="submit" class="btn primary">▶ Run cycle</button>
   </form>
+  <p class="ai-hint">Each agent runs on Claude. A full live cycle takes a few minutes — the cycle page updates automatically.</p>
 </section>
 
 <section class="stats">
@@ -40,15 +46,17 @@
 </section>
 {% endif %}
 
+{% if not runs %}
 <section class="card">
-  <h2>Pipeline cycles</h2>
-  {% if not runs %}
-    <p class="muted">No cycles yet. Start one above — try it now, it works in mock mode without any API key.</p>
-  {% else %}
+  <p class="muted">No cycles yet. Start one above — it works in mock mode without any API key, or live with Claude once your key is set.</p>
+</section>
+{% else %}
+<section class="card">
+  <h2>Recent cycles</h2>
   <table>
     <thead><tr><th>#</th><th>Topic</th><th>Status</th><th>Items</th><th>When</th><th></th></tr></thead>
     <tbody>
-    {% for run in runs %}
+    {% for run in runs[:8] %}
       <tr>
         <td>{{ run.id }}</td>
         <td>{{ run.topic or '(agent-chosen)' }}</td>
@@ -60,7 +68,7 @@
     {% endfor %}
     </tbody>
   </table>
-  {% endif %}
 </section>
+{% endif %}
 
 {% endblock %}

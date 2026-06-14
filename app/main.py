@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .brand import load_brand
-from .db import get_session, init_db
+from .db import SessionLocal, get_session, init_db
 from .llm import get_llm
 from .models import ContentItem, ItemStatus, PipelineRun
 from .orchestrator import Orchestrator
@@ -91,12 +91,19 @@ def logout(request: Request):
 
 
 def _ctx(request: Request, **extra) -> dict:
+    # Sidebar run history is shown on every page, so query it here (own session).
+    with SessionLocal() as session:
+        sidebar_runs = session.scalars(
+            select(PipelineRun).order_by(PipelineRun.created_at.desc()).limit(30)
+        ).all()
     ctx = {
         "request": request,
         "brand": load_brand(),
         "llm_enabled": get_llm().enabled,
         "auth_enabled": settings.auth_enabled,
         "ItemStatus": ItemStatus,
+        "sidebar_runs": sidebar_runs,
+        "active_run_id": None,
     }
     ctx.update(extra)
     return ctx
@@ -140,7 +147,7 @@ def run_detail(run_id: int, request: Request, session: Session = Depends(get_ses
     run = session.get(PipelineRun, run_id)
     if not run:
         return RedirectResponse(url="/", status_code=303)
-    return templates.TemplateResponse("run.html", _ctx(request, run=run))
+    return templates.TemplateResponse("run.html", _ctx(request, run=run, active_run_id=run_id))
 
 
 @app.get("/items/{item_id}")
@@ -148,7 +155,34 @@ def item_detail(item_id: int, request: Request, session: Session = Depends(get_s
     item = session.get(ContentItem, item_id)
     if not item:
         return RedirectResponse(url="/", status_code=303)
-    return templates.TemplateResponse("item.html", _ctx(request, item=item))
+    return templates.TemplateResponse(
+        "item.html", _ctx(request, item=item, active_run_id=item.run_id)
+    )
+
+
+# ── AI refine routes ──────────────────────────────────────────────────────────
+@app.post("/runs/{run_id}/refine-research")
+def refine_research(run_id: int, feedback: str = Form(...)):
+    orchestrator.refine_research(run_id, feedback)
+    return RedirectResponse(url=f"/runs/{run_id}#research", status_code=303)
+
+
+@app.post("/runs/{run_id}/refine-strategy")
+def refine_strategy(run_id: int, feedback: str = Form(...)):
+    orchestrator.refine_strategy(run_id, feedback)
+    return RedirectResponse(url=f"/runs/{run_id}#strategy", status_code=303)
+
+
+@app.post("/items/{item_id}/refine-script")
+def refine_script(item_id: int, feedback: str = Form(...)):
+    orchestrator.refine_script(item_id, feedback)
+    return RedirectResponse(url=f"/items/{item_id}#script", status_code=303)
+
+
+@app.post("/items/{item_id}/refine-creative")
+def refine_creative(item_id: int, feedback: str = Form(...)):
+    orchestrator.refine_creative(item_id, feedback)
+    return RedirectResponse(url=f"/items/{item_id}#creative", status_code=303)
 
 
 @app.post("/items/{item_id}/select-script")

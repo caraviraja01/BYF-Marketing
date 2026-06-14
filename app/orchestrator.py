@@ -222,6 +222,61 @@ class Orchestrator:
             item.creatives = creatives  # reassign so SQLAlchemy detects the change
             return creatives[idx]
 
+    # ── AI refine (apply the user's change requests) ───────────────────────────
+    def refine_research(self, run_id: int, feedback: str) -> None:
+        with session_scope() as session:
+            run = session.get(PipelineRun, run_id)
+            if not run or not run.research:
+                raise ValueError("No research to refine")
+            revised = self.research.refine(previous=run.research, feedback=feedback)
+            run.research = revised.model_dump()
+
+    def refine_strategy(self, run_id: int, feedback: str) -> None:
+        with session_scope() as session:
+            run = session.get(PipelineRun, run_id)
+            if not run or not run.strategy:
+                raise ValueError("No strategy to refine")
+            revised = self.strategy.refine(previous=run.strategy, feedback=feedback)
+            run.strategy = revised.model_dump()
+
+    def refine_script(self, item_id: int, feedback: str) -> None:
+        """Produce a new script variant from the selected one + feedback, and select it."""
+        with session_scope() as session:
+            item = session.get(ContentItem, item_id)
+            if not item or not item.scripts:
+                raise ValueError("No script to refine")
+            revised = self.script.refine(
+                previous=item.script or {}, feedback=feedback, element_model=Script
+            )
+            if not (revised.angle or "").startswith("Your edit"):
+                revised.angle = f"Your edit · {revised.angle}".strip(" ·")
+            scripts = list(item.scripts) + [revised.model_dump()]
+            item.scripts = scripts
+            item.selected_script = len(scripts) - 1
+            result = self._verify(item, [], strict=False)
+            item.verification = result.model_dump()
+            if item.status in (ItemStatus.PENDING_REVIEW, ItemStatus.NEEDS_REVISION):
+                item.status = (
+                    ItemStatus.PENDING_REVIEW if result.passed else ItemStatus.NEEDS_REVISION
+                )
+
+    def refine_creative(self, item_id: int, feedback: str) -> None:
+        """Produce a new creative concept from the selected one + feedback, and select it."""
+        with session_scope() as session:
+            item = session.get(ContentItem, item_id)
+            if not item or not item.creatives:
+                raise ValueError("No creative to refine")
+            revised = self.creative.refine(
+                previous=item.creative or {}, feedback=feedback, element_model=CreativeAsset
+            )
+            revised.status = "brief_only"  # needs (re)generation after an edit
+            revised.asset_url = None
+            if not (revised.concept or "").startswith("Your edit"):
+                revised.concept = f"Your edit · {revised.concept}".strip(" ·")
+            creatives = list(item.creatives) + [revised.model_dump()]
+            item.creatives = creatives
+            item.selected_creative = len(creatives) - 1
+
     # ── Human gate ─────────────────────────────────────────────────────────────
     def approve(self, item_id: int, note: str | None = None) -> None:
         self._set_status(item_id, ItemStatus.APPROVED, note)

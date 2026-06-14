@@ -45,6 +45,14 @@
       </div>
     {% endfor %}
     </div>
+    <div class="ai-box">
+      <h3><span class="spark">✦ Ask AI to revise</span> the selected script</h3>
+      <form class="ai-form" method="post" action="/items/{{ item.id }}/refine-script">
+        <textarea name="feedback" placeholder="e.g. make the hook punchier; shorten it; add a real number; friendlier tone" required></textarea>
+        <button class="btn primary" type="submit">Apply</button>
+      </form>
+      <p class="ai-hint">Creates a new revised option from the selected script, selects it, and re-verifies (live mode).</p>
+    </div>
   </section>
 
   {# ── Creative variants ──────────────────────────────────────────────── #}
@@ -80,6 +88,14 @@
         <button class="btn primary" type="submit">⚙️ Generate selected creative</button>
       </form>
       <span class="muted small">Generates the chosen concept now (needs Canva/Higgsfield keys; otherwise keeps the brief).</span>
+    </div>
+    <div class="ai-box">
+      <h3><span class="spark">✦ Ask AI to revise</span> the selected creative concept</h3>
+      <form class="ai-form" method="post" action="/items/{{ item.id }}/refine-creative">
+        <textarea name="feedback" placeholder="e.g. make it a video instead; fewer slides; lead with a chart; bolder colours" required></textarea>
+        <button class="btn primary" type="submit">Apply</button>
+      </form>
+      <p class="ai-hint">Creates a new concept from the selected one + your notes (then click Generate). Live mode.</p>
     </div>
   </section>
 

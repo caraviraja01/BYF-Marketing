@@ -86,3 +86,51 @@ class BaseAgent(Generic[OutT]):
                             self.name, attempt, self.max_retries, type(exc).__name__)
         assert last_error is not None
         raise last_error
+
+    def refine(self, *, previous: dict[str, Any], feedback: str,
+               element_model: type[BaseModel] | None = None, **inputs: Any) -> BaseModel:
+        """Revise a previous output to incorporate the user's change request.
+
+        ``element_model`` lets variant agents refine a single item (one Script /
+        CreativeAsset) rather than the whole set.
+        """
+        model = element_model or self.output_model
+        if not self.llm.enabled:
+            return self._mock_refine(previous, feedback, model)
+
+        schema = model.model_json_schema()
+        system = self.system_prompt()
+        user = (
+            "You previously produced this output:\n"
+            f"{previous}\n\n"
+            f"The user has requested these changes:\n\"{feedback}\"\n\n"
+            "Return a REVISED version that fully incorporates the feedback while keeping "
+            "everything else strong, accurate and on-brand. Call the emit_result tool."
+        )
+        last_error: Exception | None = None
+        for _ in range(self.max_retries):
+            try:
+                raw = self.llm.generate_json(
+                    system=system, user=user, schema=schema, fast=self.fast,
+                    max_tokens=self.max_tokens,
+                )
+                if _looks_malformed(raw):
+                    raise ValueError("malformed refine output")
+                return model.model_validate(raw)
+            except (ValidationError, ValueError, LLMError) as exc:
+                last_error = exc
+        assert last_error is not None
+        raise last_error
+
+    @staticmethod
+    def _mock_refine(previous: dict[str, Any], feedback: str, model: type[BaseModel]) -> BaseModel:
+        """Offline stand-in: annotate a text field so the change request is visible."""
+        data = dict(previous)
+        for key in ("rationale", "summary", "brief", "body", "hook", "concept", "angle"):
+            if isinstance(data.get(key), str):
+                data[key] = f"{data[key]}\n\n[Revised per request: {feedback}]"
+                break
+        try:
+            return model.model_validate(data)
+        except ValidationError:
+            return model.model_validate(previous)

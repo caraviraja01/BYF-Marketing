@@ -69,6 +69,15 @@
 
     <div class="card"><h2>🕳️ Content gaps identified</h2>
       <ul>{% for g in r.content_gaps %}<li>{{ g }}</li>{% endfor %}</ul></div>
+
+    <div class="ai-box">
+      <h3><span class="spark">✦ Ask AI to refine</span> the research</h3>
+      <form class="ai-form" method="post" action="/runs/{{ run.id }}/refine-research">
+        <textarea name="feedback" placeholder="e.g. focus more on Series A founders; add a competitor; drop the ESG angle" required></textarea>
+        <button class="btn primary" type="submit">Apply</button>
+      </form>
+      <p class="ai-hint">The Research agent rewrites this section with your changes (live mode).</p>
+    </div>
     {% endif %}
   </section>
 
@@ -93,6 +102,15 @@
     <div class="card"><h2>📅 30-day themes</h2>
       <ol>{% for m in s.monthly_themes %}<li>{{ m }}</li>{% endfor %}</ol></div>
     {% endif %}
+
+    <div class="ai-box">
+      <h3><span class="spark">✦ Ask AI to refine</span> the strategy &amp; calendar</h3>
+      <form class="ai-form" method="post" action="/runs/{{ run.id }}/refine-strategy">
+        <textarea name="feedback" placeholder="e.g. post more on LinkedIn; add a Friday reel; make week 3 about fundraising" required></textarea>
+        <button class="btn primary" type="submit">Apply</button>
+      </form>
+      <p class="ai-hint">The Strategy agent rewrites the plan and calendar with your changes (live mode).</p>
+    </div>
     {% endif %}
   </section>
 
