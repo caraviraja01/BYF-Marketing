@@ -15,6 +15,16 @@
   </div>
 </div>
 
+{% if item.status.value == 'scheduled' %}
+<div class="card highlight">
+  <h2>🗓️ Scheduled{% if item.scheduled_date %} for {{ item.scheduled_date.strftime('%A, %b %d') }}{% endif %}</h2>
+  <p class="muted">This calendar item isn't prepared yet. It will get its 3 script options and
+  3 creative concepts on its scheduled day — or prepare it now:</p>
+  <form method="post" action="/runs/{{ item.run_id }}/prepare-next" class="inline">
+    <button class="btn primary" type="submit">⚙️ Prepare this day now</button>
+  </form>
+</div>
+{% else %}
 <div class="tabs">
   <nav class="tab-bar">
     <button class="tab" data-target="script">✍️ Script ({{ item.scripts|length }} options)</button>
@@ -150,5 +160,6 @@
     {% endif %}
   </section>
 </div>
+{% endif %}
 
 {% endblock %}

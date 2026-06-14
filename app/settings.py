@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     byf_auth_username: str = "admin"
     byf_auth_password: str | None = None
     byf_secret_key: str | None = None
+    # Token that lets an external cron call /tasks/prepare-daily without a login.
+    byf_cron_token: str | None = None
 
     @property
     def llm_enabled(self) -> bool:

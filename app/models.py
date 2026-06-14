@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -25,6 +25,7 @@ class RunStatus(str, enum.Enum):
 
 
 class ItemStatus(str, enum.Enum):
+    SCHEDULED = "scheduled"         # on the calendar, not yet produced
     DRAFT = "draft"                 # script + creative produced
     NEEDS_REVISION = "needs_revision"  # failed verification
     PENDING_REVIEW = "pending_review"  # passed verify, waiting on human
@@ -64,6 +65,9 @@ class ContentItem(Base):
     title: Mapped[str] = mapped_column(String(300))
     pillar: Mapped[str | None] = mapped_column(String(80), nullable=True)
     status: Mapped[ItemStatus] = mapped_column(Enum(ItemStatus), default=ItemStatus.DRAFT)
+    # Calendar day this item is planned for (drives daily drip-preparation).
+    scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    calendar_day: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     idea: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     # Variant lists (each a list of Script / CreativeAsset dicts) + the chosen index.

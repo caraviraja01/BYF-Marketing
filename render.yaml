@@ -35,6 +35,9 @@ services:
       # Session cookie signing key — Render can auto-generate a secure value.
       - key: BYF_SECRET_KEY
         generateValue: true
+      # Token for the daily content-prep cron endpoint (/tasks/prepare-daily).
+      - key: BYF_CRON_TOKEN
+        generateValue: true
       - key: BYF_MODEL
         value: claude-sonnet-4-6
       - key: BYF_FAST_MODEL

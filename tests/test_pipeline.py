@@ -52,7 +52,7 @@ def test_agents_run_in_mock_mode():
     assert verification.compliance_ok is True
 
 
-def test_full_cycle_lands_in_review():
+def test_full_cycle_schedules_calendar_and_prepares_today():
     orch = Orchestrator()
     run_id = orch.run_cycle(topic="index funds explained")
     with session_scope() as session:
@@ -61,11 +61,27 @@ def test_full_cycle_lands_in_review():
         run = session.get(PipelineRun, run_id)
         assert run.status == RunStatus.AWAITING_REVIEW
         assert run.research and run.strategy
-        assert len(run.items) >= 1
-        assert all(
-            i.status in {ItemStatus.PENDING_REVIEW, ItemStatus.NEEDS_REVISION}
-            for i in run.items
-        )
+        assert len(run.items) >= 2  # whole 7-day calendar scheduled
+        # Today's item(s) are prepared; future days remain scheduled.
+        prepared = [i for i in run.items if i.status in {ItemStatus.PENDING_REVIEW, ItemStatus.NEEDS_REVISION}]
+        scheduled = [i for i in run.items if i.status == ItemStatus.SCHEDULED]
+        assert prepared, "today's calendar item should be prepared"
+        assert scheduled, "future days should remain scheduled"
+        assert all(i.scheduled_date for i in run.items)
+
+
+def test_prepare_next_day_prepares_scheduled_items():
+    orch = Orchestrator()
+    run_id = orch.run_cycle(topic="cap table basics")
+    count = orch.prepare_next(run_id)
+    assert count >= 1
+    with session_scope() as session:
+        from app.models import PipelineRun
+
+        run = session.get(PipelineRun, run_id)
+        # The just-prepared day's items now have scripts + creatives.
+        prepared = [i for i in run.items if i.scripts and i.creatives]
+        assert len(prepared) >= 2
 
 
 def test_approve_publish_and_analytics_loop():

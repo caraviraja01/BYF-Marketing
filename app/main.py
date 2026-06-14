@@ -6,7 +6,7 @@ import secrets
 from pathlib import Path
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Form, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -27,8 +27,8 @@ settings = get_settings()
 app = FastAPI(title="Beyond Your Finance — Marketing Automation")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
-# Paths reachable without logging in.
-_PUBLIC_PREFIXES = ("/login", "/static", "/health", "/favicon")
+# Paths reachable without logging in (the cron task is token-protected instead).
+_PUBLIC_PREFIXES = ("/login", "/static", "/health", "/favicon", "/tasks/")
 
 
 @app.middleware("http")
@@ -59,6 +59,19 @@ def _startup() -> None:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.api_route("/tasks/prepare-daily", methods=["GET", "POST"])
+def prepare_daily(token: str = ""):
+    """Cron target: prepare today's scheduled content across all runs.
+
+    Protected by BYF_CRON_TOKEN (point Render Cron / an external cron here).
+    """
+    expected = settings.byf_cron_token
+    if not expected or not hmac.compare_digest(token, expected):
+        return JSONResponse({"error": "invalid or missing token"}, status_code=403)
+    prepared = orchestrator.prepare_due()
+    return {"prepared": prepared}
 
 
 @app.get("/login")
@@ -219,6 +232,12 @@ def reject_item(item_id: int, note: str = Form(default="")):
 def publish_item(item_id: int):
     orchestrator.publish_item(item_id)
     return RedirectResponse(url=f"/items/{item_id}", status_code=303)
+
+
+@app.post("/runs/{run_id}/prepare-next")
+def prepare_next(run_id: int):
+    orchestrator.prepare_next(run_id)
+    return RedirectResponse(url=f"/runs/{run_id}#content", status_code=303)
 
 
 @app.post("/runs/{run_id}/analytics")

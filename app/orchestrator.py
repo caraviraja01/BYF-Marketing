@@ -9,7 +9,10 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
+from datetime import date, timedelta
 from typing import Any
+
+from sqlalchemy import select
 
 from .agents import (
     AnalyticsAgent,
@@ -26,6 +29,7 @@ from .integrations.web_research import WebResearchConnector
 from .models import ContentItem, ItemStatus, PipelineRun, RunStatus
 from .schemas import (
     AnalyticsInsight,
+    CalendarEntry,
     ContentIdea,
     ContentStrategy,
     CreativeAsset,
@@ -111,12 +115,18 @@ class Orchestrator:
                 run.status = RunStatus.PRODUCING
                 session.flush()
 
-                for idea in strategy.ideas:
-                    self._produce_item(session, run_id, idea, warnings, raise_on_error)
+                # Schedule the whole 7-day calendar, then prepare just today's items.
+                self._schedule_calendar(session, run_id, strategy)
+                session.flush()
+                today = date.today()
+                for item in run.items:
+                    if item.status == ItemStatus.SCHEDULED and item.scheduled_date and item.scheduled_date <= today:
+                        self._prepare_item(item, warnings, raise_on_error)
 
                 run.warnings = warnings or None
                 run.status = RunStatus.AWAITING_REVIEW
-                log.info("Run %s: awaiting review (%d warnings)", run_id, len(warnings))
+                log.info("Run %s: scheduled %d items, awaiting review (%d warnings)",
+                         run_id, len(run.items), len(warnings))
             except Exception as exc:
                 log.exception("Run %s failed", run_id)
                 run.status = RunStatus.FAILED
@@ -149,32 +159,89 @@ class Orchestrator:
         self.execute_run(run_id, items_per_run=items_per_run, raise_on_error=True)
         return run_id
 
-    def _produce_item(
-        self, session: Any, run_id: int, idea: ContentIdea,
-        warnings: list[str], strict: bool,
-    ) -> None:
+    def _schedule_calendar(self, session: Any, run_id: int, strategy: ContentStrategy) -> None:
+        """Create one SCHEDULED item per calendar entry, dated day-by-day from today.
+
+        Detailed strategy ideas (which carry richer hooks) are matched to calendar
+        entries by title where possible so the scriptwriter has more to work with.
+        """
+        ideas_by_title = {i.title.strip().lower(): i for i in strategy.ideas}
+        entries = strategy.calendar_7_day or [
+            CalendarEntry(day=f"Day {n+1}", platform=i.platform, pillar=i.pillar,
+                          format=i.format, title=i.title, funnel_stage=i.funnel_stage)
+            for n, i in enumerate(strategy.ideas)
+        ]
+        base = date.today()
+        for offset, entry in enumerate(entries):
+            idea = ideas_by_title.get(entry.title.strip().lower()) or ContentIdea(
+                title=entry.title, pillar=entry.pillar, platform=entry.platform,
+                format=entry.format, funnel_stage=entry.funnel_stage,
+                hook=entry.title, key_message=entry.title,
+                cta=(self.research.brand.get("ctas") or ["Learn more."])[0],
+            )
+            session.add(ContentItem(
+                run_id=run_id, platform=entry.platform, title=entry.title,
+                pillar=entry.pillar, status=ItemStatus.SCHEDULED,
+                scheduled_date=base + timedelta(days=offset), calendar_day=entry.day,
+                idea=idea.model_dump(),
+            ))
+
+    def _prepare_item(self, item: ContentItem, warnings: list[str], strict: bool) -> None:
+        """Produce scripts + creatives + verification for a scheduled item."""
+        idea = ContentIdea.model_validate(item.idea)
         script_set: ScriptSet = self._run_agent(self.script, "script", warnings, strict, idea=idea)
         creative_set: CreativeSet = self._run_agent(
             self.creative, "creative", warnings, strict, script=script_set.variants[0]
         )
-
-        item = ContentItem(
-            run_id=run_id,
-            platform=idea.platform,
-            title=idea.title,
-            pillar=idea.pillar,
-            status=ItemStatus.PENDING_REVIEW,
-            idea=idea.model_dump(),
-            scripts=[s.model_dump() for s in script_set.variants],
-            selected_script=0,
-            creatives=[c.model_dump() for c in creative_set.variants],
-            selected_creative=0,
-        )
-        # Verify the currently-selected script/creative pair.
+        item.scripts = [s.model_dump() for s in script_set.variants]
+        item.selected_script = 0
+        item.creatives = [c.model_dump() for c in creative_set.variants]
+        item.selected_creative = 0
         verification = self._verify(item, warnings, strict)
         item.verification = verification.model_dump()
         item.status = ItemStatus.PENDING_REVIEW if verification.passed else ItemStatus.NEEDS_REVISION
-        session.add(item)
+
+    # ── Daily drip preparation (calendar-driven) ───────────────────────────────
+    def prepare_due(self, *, run_id: int | None = None, on_date: date | None = None) -> int:
+        """Prepare every SCHEDULED item whose date is due (<= on_date). Returns count.
+
+        Called by the daily cron endpoint (all runs) or the manual button (one run).
+        """
+        on_date = on_date or date.today()
+        prepared = 0
+        with session_scope() as session:
+            q = select(ContentItem).where(ContentItem.status == ItemStatus.SCHEDULED)
+            if run_id is not None:
+                q = q.where(ContentItem.run_id == run_id)
+            for item in session.scalars(q).all():
+                if item.scheduled_date and item.scheduled_date <= on_date:
+                    self._prepare_item(item, [], strict=False)
+                    prepared += 1
+        return prepared
+
+    def prepare_next(self, run_id: int) -> int:
+        """Manually prepare the earliest still-scheduled day for a run. Returns count."""
+        with session_scope() as session:
+            items = session.scalars(
+                select(ContentItem)
+                .where(ContentItem.run_id == run_id, ContentItem.status == ItemStatus.SCHEDULED)
+                .order_by(ContentItem.scheduled_date)
+            ).all()
+            if not items:
+                return 0
+            target = items[0].scheduled_date
+            count = 0
+            for item in items:
+                if item.scheduled_date == target:
+                    self._prepare_item(item, [], strict=False)
+                    count += 1
+            return count
+
+    def _verify(self, item: ContentItem, warnings: list[str], strict: bool) -> VerificationResult:
+        return self._run_agent(
+            self.verify, "verify", warnings, strict,
+            script=item.script or {}, creative=item.creative or {},
+        )
 
     def _verify(self, item: ContentItem, warnings: list[str], strict: bool) -> VerificationResult:
         return self._run_agent(

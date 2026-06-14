@@ -36,6 +36,19 @@ run this; a 4-minute pipeline would also blow past serverless timeouts.)
   (point `BYF_DB_URL` at the mounted path) or switch to a **managed Postgres**
   (`BYF_DB_URL=postgresql+psycopg://…`; SQLAlchemy already supports it).
 
+## Daily calendar preparation
+
+A cycle now schedules a **7-day content calendar** as items; only **today's** item is
+prepared immediately, the rest stay `scheduled` and are prepared **one day at a time**.
+
+- **Manual:** the cycle's Content tab has a **"Prepare next day"** button.
+- **Automatic:** point a cron at
+  `https://<your-app>/tasks/prepare-daily?token=<BYF_CRON_TOKEN>` once a day. Use
+  **Render Cron Jobs** (`curl` the URL) or a free service like cron-job.org. The
+  endpoint is token-protected (no login needed) and prepares every item due that day.
+  Render auto-generates `BYF_CRON_TOKEN`; copy its value from the dashboard into the
+  cron's URL.
+
 ## Env vars (set in `render.yaml`, secrets in the dashboard)
 
 | Var | Purpose |
