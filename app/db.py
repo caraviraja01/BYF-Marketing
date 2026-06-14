@@ -44,6 +44,15 @@ def init_db() -> None:
     Base.metadata.create_all(engine)
 
 
+def reset_db() -> None:
+    """Drop and recreate all tables. Used to apply schema changes on a throwaway DB
+    (e.g. switching status columns off native Postgres enums)."""
+    from . import models  # noqa: F401
+
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+
+
 @contextmanager
 def session_scope() -> Iterator[Session]:
     session = SessionLocal()

@@ -15,6 +15,12 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _status_col(enum_cls):
+    """Store status enums as plain VARCHAR (no native DB enum), so adding new
+    statuses never requires a Postgres enum migration."""
+    return Enum(enum_cls, native_enum=False, create_constraint=False, length=32)
+
+
 class RunStatus(str, enum.Enum):
     RESEARCHING = "researching"
     STRATEGISING = "strategising"
@@ -40,7 +46,7 @@ class PipelineRun(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     topic: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    status: Mapped[RunStatus] = mapped_column(Enum(RunStatus), default=RunStatus.RESEARCHING)
+    status: Mapped[RunStatus] = mapped_column(_status_col(RunStatus), default=RunStatus.RESEARCHING)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     # Stage artifacts (structured agent output).
@@ -65,7 +71,7 @@ class ContentItem(Base):
     platform: Mapped[str] = mapped_column(String(40))
     title: Mapped[str] = mapped_column(String(300))
     pillar: Mapped[str | None] = mapped_column(String(80), nullable=True)
-    status: Mapped[ItemStatus] = mapped_column(Enum(ItemStatus), default=ItemStatus.DRAFT)
+    status: Mapped[ItemStatus] = mapped_column(_status_col(ItemStatus), default=ItemStatus.DRAFT)
     # Calendar day this item is planned for (drives daily drip-preparation).
     scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     calendar_day: Mapped[str | None] = mapped_column(String(20), nullable=True)

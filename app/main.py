@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .brand import load_brand
-from .db import SessionLocal, get_session, init_db
+from .db import SessionLocal, get_session, init_db, reset_db
 from .llm import get_llm
 from .models import ContentItem, ItemStatus, PipelineRun
 from .orchestrator import Orchestrator
@@ -74,6 +74,18 @@ def prepare_daily(background_tasks: BackgroundTasks, token: str = ""):
     ids = orchestrator.mark_preparing(mode="due")
     background_tasks.add_task(orchestrator.prepare_marked, ids)
     return {"scheduled_for_preparation": len(ids)}
+
+
+@app.api_route("/tasks/reset-db", methods=["GET", "POST"])
+def reset_database(token: str = "", confirm: str = ""):
+    """Drop & recreate all tables (token-protected). One-time schema fix; clears data."""
+    expected = settings.byf_cron_token
+    if not expected or not hmac.compare_digest(token, expected):
+        return JSONResponse({"error": "invalid or missing token"}, status_code=403)
+    if confirm != "yes":
+        return JSONResponse({"error": "add &confirm=yes to confirm — this clears all data"}, status_code=400)
+    reset_db()
+    return {"status": "database reset"}
 
 
 @app.get("/login")
