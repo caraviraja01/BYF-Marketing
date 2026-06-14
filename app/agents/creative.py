@@ -9,7 +9,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..integrations.higgsfield import HiggsfieldConnector
-from ..schemas import CreativeAsset, CreativeSet, Script
+from ..schemas import CreativeAsset, CreativeSet
+from ..settings import get_settings
 from .base import BaseAgent
 
 
@@ -23,6 +24,9 @@ class CreativeAgent(BaseAgent[CreativeSet]):
     def __init__(self, *args: Any, higgsfield: HiggsfieldConnector | None = None, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.higgsfield = higgsfield or HiggsfieldConnector()
+        s = get_settings()
+        self.n_variants = max(1, s.byf_variants)
+        self.fast = s.byf_fast_content
 
     def expertise(self) -> str:
         return (
@@ -34,12 +38,18 @@ class CreativeAgent(BaseAgent[CreativeSet]):
             "disclaimer."
         )
 
-    def build_user_prompt(self, *, script: dict[str, Any] | Script, **_: Any) -> str:
-        data = script.model_dump() if isinstance(script, Script) else script
+    def _source(self, idea: Any = None, script: Any = None) -> dict[str, Any]:
+        src = idea if idea is not None else script
+        if hasattr(src, "model_dump"):
+            return src.model_dump()
+        return src or {}
+
+    def build_user_prompt(self, *, idea: Any = None, script: Any = None, **_: Any) -> str:
+        data = self._source(idea, script)
         return (
-            f"Design {self.n_variants} DISTINCT creative concepts for this script so a "
+            f"Design {self.n_variants} DISTINCT creative concepts for this content so a "
             "human can pick one.\n\n"
-            f"SCRIPT:\n{data}\n\n"
+            f"CONTENT:\n{data}\n\n"
             f"Make the {self.n_variants} concepts genuinely different (e.g. a carousel, a "
             "single bold-stat image, and a short talking-head/animated video). For each: "
             "set a short `concept` label, the `type`, a concise `brief`, and `slides` for "
@@ -48,8 +58,8 @@ class CreativeAgent(BaseAgent[CreativeSet]):
             "`variants`."
         )
 
-    def mock(self, *, script: dict[str, Any] | Script, **_: Any) -> CreativeSet:
-        data = script.model_dump() if isinstance(script, Script) else script
+    def mock(self, *, idea: Any = None, script: Any = None, **_: Any) -> CreativeSet:
+        data = self._source(idea, script)
         hook = data.get("hook", "BYF creative")
         cta = data.get("cta", "Schedule a CFO Strategy Call.")
         disc = "For informational purposes only — not professional advice."

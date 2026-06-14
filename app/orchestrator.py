@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any
@@ -187,12 +188,16 @@ class Orchestrator:
             ))
 
     def _prepare_item(self, item: ContentItem, warnings: list[str], strict: bool) -> None:
-        """Produce scripts + creatives + verification for a scheduled item."""
+        """Produce scripts + creatives + verification for a scheduled item.
+
+        Script and Creative are independent, so run them concurrently to cut latency.
+        """
         idea = ContentIdea.model_validate(item.idea)
-        script_set: ScriptSet = self._run_agent(self.script, "script", warnings, strict, idea=idea)
-        creative_set: CreativeSet = self._run_agent(
-            self.creative, "creative", warnings, strict, script=script_set.variants[0]
-        )
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f_script = ex.submit(self._run_agent, self.script, "script", warnings, strict, idea=idea)
+            f_creative = ex.submit(self._run_agent, self.creative, "creative", warnings, strict, idea=idea)
+            script_set: ScriptSet = f_script.result()
+            creative_set: CreativeSet = f_creative.result()
         item.scripts = [s.model_dump() for s in script_set.variants]
         item.selected_script = 0
         item.creatives = [c.model_dump() for c in creative_set.variants]
@@ -227,21 +232,27 @@ class Orchestrator:
                 item.status = ItemStatus.PREPARING
             return [i.id for i in chosen]
 
+    def _prepare_one(self, item_id: int) -> bool:
+        with session_scope() as session:
+            item = session.get(ContentItem, item_id)
+            if not item or item.status != ItemStatus.PREPARING:
+                return False
+            try:
+                self._prepare_item(item, [], strict=False)
+                return True
+            except Exception:
+                log.exception("Failed to prepare item %s", item_id)
+                item.status = ItemStatus.SCHEDULED  # let the user retry
+                return False
+
     def prepare_marked(self, item_ids: list[int]) -> int:
-        """Run the agents for items flagged PREPARING. Safe for a background task."""
-        prepared = 0
-        for item_id in item_ids:
-            with session_scope() as session:
-                item = session.get(ContentItem, item_id)
-                if not item or item.status != ItemStatus.PREPARING:
-                    continue
-                try:
-                    self._prepare_item(item, [], strict=False)
-                    prepared += 1
-                except Exception:
-                    log.exception("Failed to prepare item %s", item_id)
-                    item.status = ItemStatus.SCHEDULED  # let the user retry
-        return prepared
+        """Run the agents for items flagged PREPARING, several at once. Background-safe."""
+        if not item_ids:
+            return 0
+        workers = min(len(item_ids), 4)
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            results = list(ex.map(self._prepare_one, item_ids))
+        return sum(1 for ok in results if ok)
 
     def prepare_due_now(self, *, on_date: date | None = None) -> int:
         """Synchronous mark + prepare of all due items (used by the cron worker)."""

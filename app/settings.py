@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     byf_model: str = "claude-sonnet-4-6"
     byf_fast_model: str = "claude-haiku-4-5-20251001"
 
+    # Speed knobs.
+    #  - byf_variants: how many script/creative options per item (fewer = faster).
+    #  - byf_fast_content: run script & creative on the fast model (Haiku) — much
+    #    faster, slightly less polished (the verify gate + your review still apply).
+    byf_variants: int = 3
+    byf_fast_content: bool = False
+
     # App
     byf_db_url: str = f"sqlite:///{ROOT / 'data' / 'byf.db'}"
     byf_env: str = "development"

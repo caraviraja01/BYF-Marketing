@@ -47,6 +47,12 @@ services:
         value: claude-sonnet-4-6
       - key: BYF_FAST_MODEL
         value: claude-haiku-4-5-20251001
+      # Speed: fewer options + faster model for script/creative. Flip to "true"/
+      # lower the count in the dashboard if cycles feel slow.
+      - key: BYF_VARIANTS
+        value: "3"
+      - key: BYF_FAST_CONTENT
+        value: "false"
       # Persistent history — connection string from the Postgres above.
       - key: BYF_DB_URL
         fromDatabase:

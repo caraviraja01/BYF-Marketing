@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..settings import get_settings
 from ..schemas import ContentIdea, Script, ScriptSet
 from .base import BaseAgent
 
@@ -17,6 +18,12 @@ class ScriptAgent(BaseAgent[ScriptSet]):
     output_model = ScriptSet
     n_variants = 3
     max_tokens = 8192  # three full scripts in one response
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        s = get_settings()
+        self.n_variants = max(1, s.byf_variants)
+        self.fast = s.byf_fast_content  # run on Haiku when fast mode is on
 
     def expertise(self) -> str:
         return (
