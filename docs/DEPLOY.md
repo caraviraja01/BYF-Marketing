@@ -26,15 +26,21 @@ run this; a 4-minute pipeline would also blow past serverless timeouts.)
   add real social credentials — approving + "publishing" produces a clearly
   labelled `simulated://` reference so you can test the full loop.
 
+## Persistence (run history)
+
+The blueprint provisions a **free Render Postgres** (`byf-db`) and wires
+`BYF_DB_URL` to its connection string, so **run history persists** across restarts
+and redeploys. (The web instance's own filesystem is ephemeral — that's why SQLite
+history vanished before.) The app rewrites `postgres://` URLs to the psycopg driver
+automatically. Free Render Postgres expires after ~30 days; recreate it or upgrade
+to keep data longer. Locally it still defaults to SQLite.
+
 ## Important caveats on the free plan
 
-- **Ephemeral storage + spin-down.** Free instances sleep after ~15 min idle and
-  reset their filesystem, so the SQLite DB (`/tmp/byf.db`) is wiped on restart.
-  Great for testing; not for keeping data. First request after sleep is slow
-  (cold start).
-- **For persistence:** upgrade the instance and either attach a **Render Disk**
-  (point `BYF_DB_URL` at the mounted path) or switch to a **managed Postgres**
-  (`BYF_DB_URL=postgresql+psycopg://…`; SQLAlchemy already supports it).
+- **Spin-down.** Free web instances sleep after ~15 min idle; the first request
+  after is a slow cold start. History itself is safe in Postgres.
+- **Creative generation** (Higgsfield image/video) runs as a background job and can
+  take a few minutes; the item page auto-refreshes until the asset is ready.
 
 ## Daily calendar preparation
 

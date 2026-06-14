@@ -275,15 +275,31 @@ class Orchestrator:
                 raise ValueError("Creative index out of range")
             item.selected_creative = index
 
+    def mark_creative_generating(self, item_id: int) -> None:
+        """Flag the selected creative as generating (instant UI feedback before the
+        slow Higgsfield job runs in the background)."""
+        with session_scope() as session:
+            item = session.get(ContentItem, item_id)
+            if not item or not item.creatives:
+                raise ValueError(f"Content item {item_id} has no creative to generate")
+            creatives = list(item.creatives)
+            creatives[item.selected_creative]["status"] = "generating"
+            creatives[item.selected_creative]["error"] = None
+            item.creatives = creatives
+
     def realize_creative(self, item_id: int) -> dict[str, Any]:
-        """Generate the actual asset for the selected creative concept (Canva/Higgsfield)."""
+        """Generate the actual asset for the selected creative concept via Higgsfield.
+
+        Slow (async image/video jobs) — call from a background task.
+        """
         with session_scope() as session:
             item = session.get(ContentItem, item_id)
             if not item or not item.creatives:
                 raise ValueError(f"Content item {item_id} has no creative to generate")
             idx = item.selected_creative
+            fmt = (item.idea or {}).get("format", "")
             asset = CreativeAsset.model_validate(item.creatives[idx])
-            asset = self.creative.realize(asset)
+            asset = self.creative.realize(asset, platform=item.platform, fmt=fmt)
             creatives = list(item.creatives)
             creatives[idx] = asset.model_dump()
             item.creatives = creatives  # reassign so SQLAlchemy detects the change

@@ -52,8 +52,7 @@ python -m app.cli run            # let the Research agent pick the topic
 |------------|--------|------------------|
 | All 6 agents | **Real** (Claude) | `app/agents/*` — runs live with an API key |
 | Trend / competitor web data | Pluggable | `app/integrations/web_research.py` |
-| Canva creatives (images / carousels) | Pluggable | `app/integrations/canva.py` |
-| Higgsfield video generation | **Real** (submit + poll) | `app/integrations/higgsfield.py` |
+| Creatives — images, carousels & video (Higgsfield) | **Real** (submit + poll) | `app/integrations/higgsfield.py` |
 | Social publishing (LinkedIn/IG/YouTube/X) | Stubbed behind one interface | `app/integrations/social/*` |
 | Analytics fetch | Stubbed behind one interface | `app/integrations/analytics_providers.py` |
 

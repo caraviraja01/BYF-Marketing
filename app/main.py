@@ -117,6 +117,7 @@ def _ctx(request: Request, **extra) -> dict:
         "ItemStatus": ItemStatus,
         "sidebar_runs": sidebar_runs,
         "active_run_id": None,
+        "flash": request.session.pop("flash", None) if "session" in request.scope else None,
     }
     ctx.update(extra)
     return ctx
@@ -173,28 +174,48 @@ def item_detail(item_id: int, request: Request, session: Session = Depends(get_s
     )
 
 
-# ── AI refine routes ──────────────────────────────────────────────────────────
+def _flash(request: Request, text: str, kind: str = "ok") -> None:
+    request.session["flash"] = {"text": text, "kind": kind}
+
+
+# ── AI refine routes (errors surfaced as a flash, never a 500) ─────────────────
 @app.post("/runs/{run_id}/refine-research")
-def refine_research(run_id: int, feedback: str = Form(...)):
-    orchestrator.refine_research(run_id, feedback)
+def refine_research(request: Request, run_id: int, feedback: str = Form(...)):
+    try:
+        orchestrator.refine_research(run_id, feedback)
+        _flash(request, "Research updated with your changes.")
+    except Exception as exc:
+        _flash(request, f"Couldn't apply that change: {exc}. Try rephrasing.", "warn")
     return RedirectResponse(url=f"/runs/{run_id}#research", status_code=303)
 
 
 @app.post("/runs/{run_id}/refine-strategy")
-def refine_strategy(run_id: int, feedback: str = Form(...)):
-    orchestrator.refine_strategy(run_id, feedback)
+def refine_strategy(request: Request, run_id: int, feedback: str = Form(...)):
+    try:
+        orchestrator.refine_strategy(run_id, feedback)
+        _flash(request, "Strategy & calendar updated with your changes.")
+    except Exception as exc:
+        _flash(request, f"Couldn't apply that change: {exc}. Try rephrasing.", "warn")
     return RedirectResponse(url=f"/runs/{run_id}#strategy", status_code=303)
 
 
 @app.post("/items/{item_id}/refine-script")
-def refine_script(item_id: int, feedback: str = Form(...)):
-    orchestrator.refine_script(item_id, feedback)
+def refine_script(request: Request, item_id: int, feedback: str = Form(...)):
+    try:
+        orchestrator.refine_script(item_id, feedback)
+        _flash(request, "Added a revised script option (selected).")
+    except Exception as exc:
+        _flash(request, f"Couldn't revise the script: {exc}. Try rephrasing.", "warn")
     return RedirectResponse(url=f"/items/{item_id}#script", status_code=303)
 
 
 @app.post("/items/{item_id}/refine-creative")
-def refine_creative(item_id: int, feedback: str = Form(...)):
-    orchestrator.refine_creative(item_id, feedback)
+def refine_creative(request: Request, item_id: int, feedback: str = Form(...)):
+    try:
+        orchestrator.refine_creative(item_id, feedback)
+        _flash(request, "Added a revised creative concept (selected). Click Generate to render it.")
+    except Exception as exc:
+        _flash(request, f"Couldn't revise the creative: {exc}. Try rephrasing.", "warn")
     return RedirectResponse(url=f"/items/{item_id}#creative", status_code=303)
 
 
@@ -211,8 +232,12 @@ def select_creative(item_id: int, index: int = Form(...)):
 
 
 @app.post("/items/{item_id}/generate-creative")
-def generate_creative(item_id: int):
-    orchestrator.realize_creative(item_id)
+def generate_creative(request: Request, item_id: int, background_tasks: BackgroundTasks):
+    # Higgsfield image/video jobs take minutes — mark generating now and run in the
+    # background so the request returns immediately (the page auto-refreshes).
+    orchestrator.mark_creative_generating(item_id)
+    background_tasks.add_task(orchestrator.realize_creative, item_id)
+    _flash(request, "Generating your creative with Higgsfield… this can take a few minutes.")
     return RedirectResponse(url=f"/items/{item_id}#creative", status_code=303)
 
 

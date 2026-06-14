@@ -96,10 +96,11 @@ class CreativeAsset(BaseModel):
     concept: str = Field(default="", description="Short label for this variant's visual concept")
     type: str = Field(description="image | carousel | video | brief")
     status: str = Field(description="generated | generating | brief_only | failed")
-    provider: str = Field(default="", description="canva | higgsfield | none")
+    provider: str = Field(default="", description="higgsfield | none")
     title: str
     asset_url: str | None = None
     thumbnail_url: str | None = None
+    slide_urls: list[str] = Field(default_factory=list, description="Per-slide image URLs (carousels)")
     canva_design_id: str | None = None
     higgsfield_request_id: str | None = None
     brief: str = Field(description="Creative brief / spec used or for a designer")

@@ -1,22 +1,26 @@
-"""Higgsfield video-generation connector.
+"""Higgsfield connector — generates images AND video for creatives.
 
-Generates short-form video from a creative brief. Higgsfield is image-to-video,
-so the flow is: (optional) a starting image → submit a generation job → poll until
-the job completes → store the resulting video URL.
+Higgsfield is the sole creative provider (no Canva). Flow per type:
+  * image    → text-to-image  (one job)
+  * carousel → text-to-image per slide
+  * video    → text-to-image cover, then image-to-video
 
-Auth + endpoints follow the official Higgsfield API:
+All jobs are async: submit → poll until completed. Auth + endpoints follow the
+official Higgsfield API:
   base   : https://platform.higgsfield.ai
   header : Authorization: Key <KEY_ID>:<KEY_SECRET>
-  submit : POST /v1/image2video/dop      {model, prompt, input_images:[...]}
+  image  : POST /v1/text2image/soul
+  video  : POST /v1/image2video/dop
   poll   : GET  /requests/{request_id}/status
 
 Credentials come from env (HIGGSFIELD_API_KEY, HIGGSFIELD_SECRET). If the key is
-already in "id:secret" form, the secret env is optional. Anything missing or any
-error degrades gracefully to a brief — the pipeline never breaks because video
-generation is slow or unavailable.
+already "id:secret", the secret env is optional. Any error or missing key degrades
+gracefully to a brief — the pipeline never breaks because generation is slow or
+the host is unreachable.
 """
 from __future__ import annotations
 
+import logging
 import os
 import time
 
@@ -24,9 +28,24 @@ import httpx
 
 from ..schemas import CreativeAsset
 
+log = logging.getLogger("byf.higgsfield")
+
 BASE_URL = os.getenv("HIGGSFIELD_BASE_URL", "https://platform.higgsfield.ai")
-SUBMIT_PATH = os.getenv("HIGGSFIELD_SUBMIT_PATH", "/v1/image2video/dop")
-MODEL = os.getenv("HIGGSFIELD_MODEL", "dop-turbo")
+IMAGE_PATH = os.getenv("HIGGSFIELD_IMAGE_PATH", "/v1/text2image/soul")
+VIDEO_PATH = os.getenv("HIGGSFIELD_VIDEO_PATH", "/v1/image2video/dop")
+VIDEO_MODEL = os.getenv("HIGGSFIELD_VIDEO_MODEL", "dop-turbo")
+
+# Aspect ratio per platform/format.
+def _aspect(platform: str, fmt: str) -> str:
+    f = (fmt or "").lower()
+    p = (platform or "").lower()
+    if f in {"reel", "short", "story"} or p in {"instagram", "youtube"} and "short" in f:
+        return "9:16"
+    if p == "youtube":
+        return "16:9"
+    if f == "carousel":
+        return "4:5"
+    return "1:1"
 
 
 class HiggsfieldConnector:
@@ -38,73 +57,76 @@ class HiggsfieldConnector:
     def enabled(self) -> bool:
         return bool(self._key)
 
-    def _auth_header(self) -> str:
-        # Accept either "id:secret" in the key, or separate key + secret envs.
+    def _headers(self) -> dict[str, str]:
         cred = self._key if ":" in (self._key or "") else f"{self._key}:{self._secret or ''}"
-        return f"Key {cred}"
+        return {"Authorization": f"Key {cred}", "Content-Type": "application/json"}
 
-    def produce(self, asset: CreativeAsset, *, start_image_url: str | None = None,
-                poll_timeout_sec: int = 180, poll_interval_sec: int = 5) -> CreativeAsset:
-        """Generate a video for ``asset`` from its brief. Degrades to a brief on failure."""
+    # ── Public entry point ─────────────────────────────────────────────────────
+    def produce(self, asset: CreativeAsset, *, platform: str = "", fmt: str = "") -> CreativeAsset:
         asset.provider = "higgsfield"
         if not self.enabled:
             asset.status = "brief_only"
-            asset.error = "Higgsfield not configured (set HIGGSFIELD_API_KEY)."
+            asset.error = "Higgsfield not connected — set HIGGSFIELD_API_KEY (and HIGGSFIELD_SECRET)."
             return asset
         try:
-            request_id = self._submit(asset, start_image_url)
-            asset.higgsfield_request_id = request_id
-            video_url = self._poll(request_id, poll_timeout_sec, poll_interval_sec)
-            if video_url:
-                asset.asset_url = video_url
-                asset.status = "generated"
-            else:
-                asset.status = "generating"  # still running past our wait window
+            ar = _aspect(platform, fmt or asset.type)
+            if asset.type == "video":
+                cover = self._image(asset.brief or asset.title, "9:16")
+                video = self._video(asset.brief or asset.title, cover)
+                asset.asset_url, asset.thumbnail_url, asset.status = video, cover, "generated"
+            elif asset.type == "carousel":
+                prompts = asset.slides or [asset.brief or asset.title]
+                urls = [self._image(f"{asset.brief}\n\nSlide: {s}", ar) for s in prompts[:6]]
+                asset.slide_urls = [u for u in urls if u]
+                asset.asset_url = asset.slide_urls[0] if asset.slide_urls else None
+                asset.status = "generated" if asset.slide_urls else "brief_only"
+            else:  # image
+                asset.asset_url = self._image(asset.brief or asset.title, ar)
+                asset.status = "generated" if asset.asset_url else "brief_only"
             return asset
-        except Exception as exc:  # never break the pipeline on a video error
+        except Exception as exc:  # never break the pipeline
+            log.exception("Higgsfield generation failed")
             asset.status = "brief_only"
             asset.error = f"Higgsfield generation failed: {exc}"
             return asset
 
-    def _submit(self, asset: CreativeAsset, start_image_url: str | None) -> str:
-        payload: dict = {
-            "input": {
-                "model": MODEL,
-                "prompt": asset.brief or asset.title,
-            }
-        }
+    # ── Internals ──────────────────────────────────────────────────────────────
+    def _image(self, prompt: str, aspect_ratio: str) -> str | None:
+        payload = {"params": {"prompt": prompt[:1500], "aspect_ratio": aspect_ratio, "safety_tolerance": 2}}
+        rid = self._submit(IMAGE_PATH, payload)
+        return self._poll(rid)
+
+    def _video(self, prompt: str, start_image_url: str | None) -> str | None:
+        inp: dict = {"model": VIDEO_MODEL, "prompt": prompt[:1500]}
         if start_image_url:
-            payload["input"]["input_images"] = [
-                {"type": "image_url", "image_url": start_image_url}
-            ]
+            inp["input_images"] = [{"type": "image_url", "image_url": start_image_url}]
+        rid = self._submit(VIDEO_PATH, {"params": inp})
+        return self._poll(rid)
+
+    def _submit(self, path: str, payload: dict) -> str:
         with httpx.Client(base_url=BASE_URL, timeout=30) as client:
-            resp = client.post(
-                SUBMIT_PATH,
-                headers={"Authorization": self._auth_header(), "Content-Type": "application/json"},
-                json=payload,
-            )
+            resp = client.post(path, headers=self._headers(), json=payload)
             resp.raise_for_status()
             data = resp.json()
-        request_id = data.get("request_id") or data.get("id")
-        if not request_id:
-            raise RuntimeError(f"No request_id in submit response: {data}")
-        return request_id
+        rid = data.get("request_id") or data.get("id") or (data.get("jobs") or [{}])[0].get("id")
+        if not rid:
+            raise RuntimeError(f"No request_id in submit response: {str(data)[:200]}")
+        return rid
 
-    def _poll(self, request_id: str, timeout_sec: int, interval_sec: int) -> str | None:
+    def _poll(self, request_id: str, timeout_sec: int = 240, interval_sec: int = 5) -> str | None:
         deadline = time.monotonic() + timeout_sec
         with httpx.Client(base_url=BASE_URL, timeout=30) as client:
             while time.monotonic() < deadline:
-                resp = client.get(
-                    f"/requests/{request_id}/status",
-                    headers={"Authorization": self._auth_header()},
-                )
+                resp = client.get(f"/requests/{request_id}/status", headers=self._headers())
                 resp.raise_for_status()
                 data = resp.json()
                 status = (data.get("status") or "").lower()
                 if status == "completed":
-                    video = data.get("video") or {}
-                    return video.get("url") or data.get("url")
+                    media = data.get("video") or data.get("image") or data.get("result") or {}
+                    if isinstance(media, dict):
+                        return media.get("url") or media.get("raw", {}).get("url") or data.get("url")
+                    return data.get("url")
                 if status in {"failed", "nsfw"}:
-                    raise RuntimeError(f"Higgsfield job {status}: {data}")
+                    raise RuntimeError(f"Higgsfield job {status}")
                 time.sleep(interval_sec)
-        return None  # still running; caller leaves status as 'generating'
+        return None

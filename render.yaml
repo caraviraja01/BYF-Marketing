@@ -8,9 +8,14 @@
 #   4. Set the ANTHROPIC_API_KEY secret when prompted (it is NOT stored here).
 #   5. Open the generated *.onrender.com URL.
 #
-# Note: the free plan has an ephemeral filesystem and spins down when idle, so
-# the SQLite data resets on restart — fine for testing. For persistence, attach
-# a Render Disk (paid) and point BYF_DB_URL at it, or move to Postgres.
+# Run history is stored in a free Render Postgres (below) so it persists across
+# restarts/redeploys — the free instance's filesystem is otherwise ephemeral.
+
+databases:
+  - name: byf-db
+    plan: free
+    databaseName: byf
+    user: byf
 
 services:
   - type: web
@@ -42,8 +47,11 @@ services:
         value: claude-sonnet-4-6
       - key: BYF_FAST_MODEL
         value: claude-haiku-4-5-20251001
+      # Persistent history — connection string from the Postgres above.
       - key: BYF_DB_URL
-        value: sqlite:////tmp/byf.db
+        fromDatabase:
+          name: byf-db
+          property: connectionString
       - key: BYF_ENV
         value: production
       # Simulate publishing until real social credentials are added.
@@ -52,7 +60,9 @@ services:
       # Keep the dashboard populated even if a live agent call fails.
       - key: BYF_FALLBACK_TO_MOCK_ON_ERROR
         value: "true"
-      # Higgsfield video generation (set as secrets in the dashboard).
+      # Higgsfield image + video generation — REQUIRED for creatives.
+      # Set both in the dashboard. Auth is "Key <id>:<secret>"; if you only have
+      # one token, put it in HIGGSFIELD_API_KEY (and leave SECRET blank).
       - key: HIGGSFIELD_API_KEY
         sync: false
       - key: HIGGSFIELD_SECRET

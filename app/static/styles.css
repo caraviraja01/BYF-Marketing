@@ -154,6 +154,11 @@ pre.body { white-space: pre-wrap; background: var(--panel-2); padding: 14px; bor
 .ai-form textarea { min-height: 46px; }
 .ai-hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
 
+/* Flash messages */
+.flash { padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 14px; border: 1px solid var(--border); }
+.flash.ok { color: var(--brand); background: rgba(31,209,160,.1); border-color: var(--brand); }
+.flash.warn { color: var(--warn); background: rgba(255,176,32,.1); border-color: var(--warn); }
+
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; flex-direction: column; }

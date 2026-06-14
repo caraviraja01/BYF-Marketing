@@ -25,10 +25,6 @@ class Settings(BaseSettings):
     byf_env: str = "development"
     brand_file: Path = ROOT / "config" / "brand.yaml"
 
-    # Canva
-    canva_api_key: str | None = None
-    canva_brand_template_id: str | None = None
-
     # Dashboard auth. Login is enforced only when a password is set, so local dev
     # stays open while a hosted deployment can be protected by setting BYF_AUTH_PASSWORD.
     byf_auth_username: str = "admin"

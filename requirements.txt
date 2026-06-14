@@ -8,5 +8,6 @@ pydantic-settings==2.7.1
 anthropic==0.42.0
 itsdangerous==2.2.0
 httpx==0.28.1
+psycopg[binary]==3.2.3
 pyyaml>=6.0
 python-dotenv==1.0.1

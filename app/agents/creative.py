@@ -2,13 +2,12 @@
 
 Produces 3 distinct visual concepts for one idea (the human picks one). Writing the
 concepts/briefs is cheap (LLM text); the actual asset is only generated for the
-*selected* concept, routed to Canva (images / carousels) or Higgsfield (video).
+*selected* concept — all types (image, carousel, video) are rendered by Higgsfield.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from ..integrations.canva import CanvaConnector
 from ..integrations.higgsfield import HiggsfieldConnector
 from ..schemas import CreativeAsset, CreativeSet, Script
 from .base import BaseAgent
@@ -16,20 +15,13 @@ from .base import BaseAgent
 
 class CreativeAgent(BaseAgent[CreativeSet]):
     name = "creative"
-    role = "Creative — on-brand visuals via Canva & Higgsfield"
+    role = "Creative — on-brand visuals & video via Higgsfield"
     output_model = CreativeSet
     n_variants = 3
     max_tokens = 8192  # three creative concepts in one response
 
-    def __init__(
-        self,
-        *args: Any,
-        canva: CanvaConnector | None = None,
-        higgsfield: HiggsfieldConnector | None = None,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, *args: Any, higgsfield: HiggsfieldConnector | None = None, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.canva = canva or CanvaConnector()
         self.higgsfield = higgsfield or HiggsfieldConnector()
 
     def expertise(self) -> str:
@@ -87,8 +79,6 @@ class CreativeAgent(BaseAgent[CreativeSet]):
             ),
         ])
 
-    def realize(self, asset: CreativeAsset, *, start_image_url: str | None = None) -> CreativeAsset:
-        """Generate the actual asset for a chosen concept via the right provider."""
-        if asset.type == "video":
-            return self.higgsfield.produce(asset, start_image_url=start_image_url)
-        return self.canva.produce(asset)
+    def realize(self, asset: CreativeAsset, *, platform: str = "", fmt: str = "") -> CreativeAsset:
+        """Generate the actual asset (image / carousel / video) via Higgsfield."""
+        return self.higgsfield.produce(asset, platform=platform, fmt=fmt)

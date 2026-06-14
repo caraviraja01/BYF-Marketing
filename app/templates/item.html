@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ item.title }} · BYF Marketing{% endblock %}
+{% set generating = (item.creatives or []) | selectattr('status', 'equalto', 'generating') | list %}
+{% block head %}{% if generating %}<meta http-equiv="refresh" content="8" />{% endif %}{% endblock %}
 {% block content %}
 
 <p><a href="/runs/{{ item.run_id }}#content" class="muted">← Cycle #{{ item.run_id }}</a></p>
