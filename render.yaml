@@ -27,6 +27,14 @@ services:
       # Secret — leave blank here; set the real value in the Render dashboard.
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Dashboard login — set a strong password in the dashboard to protect the URL.
+      - key: BYF_AUTH_USERNAME
+        value: admin
+      - key: BYF_AUTH_PASSWORD
+        sync: false
+      # Session cookie signing key — Render can auto-generate a secure value.
+      - key: BYF_SECRET_KEY
+        generateValue: true
       - key: BYF_MODEL
         value: claude-opus-4-8
       - key: BYF_FAST_MODEL

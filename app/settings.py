@@ -28,10 +28,20 @@ class Settings(BaseSettings):
     canva_api_key: str | None = None
     canva_brand_template_id: str | None = None
 
+    # Dashboard auth. Login is enforced only when a password is set, so local dev
+    # stays open while a hosted deployment can be protected by setting BYF_AUTH_PASSWORD.
+    byf_auth_username: str = "admin"
+    byf_auth_password: str | None = None
+    byf_secret_key: str | None = None
+
     @property
     def llm_enabled(self) -> bool:
         """True when a real Claude key is present; otherwise agents run in mock mode."""
         return bool(self.anthropic_api_key)
+
+    @property
+    def auth_enabled(self) -> bool:
+        return bool(self.byf_auth_password)
 
 
 @lru_cache

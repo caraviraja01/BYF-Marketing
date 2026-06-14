@@ -1,12 +1,15 @@
 """FastAPI app: the dashboard, the human-review gate, and the analytics view."""
 from __future__ import annotations
 
+import hmac
+import secrets
 from pathlib import Path
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,12 +18,35 @@ from .db import get_session, init_db
 from .llm import get_llm
 from .models import ContentItem, ItemStatus, PipelineRun
 from .orchestrator import Orchestrator
+from .settings import get_settings
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+settings = get_settings()
 
 app = FastAPI(title="Beyond Your Finance — Marketing Automation")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+# Paths reachable without logging in.
+_PUBLIC_PREFIXES = ("/login", "/static", "/health", "/favicon")
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    if settings.auth_enabled and not request.url.path.startswith(_PUBLIC_PREFIXES):
+        if not request.session.get("authed"):
+            return RedirectResponse(url="/login", status_code=303)
+    return await call_next(request)
+
+
+# SessionMiddleware is added last so it wraps (runs before) the auth check,
+# making request.session available. Secret key signs the session cookie.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.byf_secret_key or secrets.token_hex(32),
+    https_only=settings.byf_env == "production",
+    same_site="lax",
+)
 
 orchestrator = Orchestrator()
 
@@ -30,11 +56,46 @@ def _startup() -> None:
     init_db()
 
 
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/login")
+def login_form(request: Request):
+    if not settings.auth_enabled or request.session.get("authed"):
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(
+        "login.html", {"request": request, "brand": load_brand(), "error": None}
+    )
+
+
+@app.post("/login")
+def login_submit(request: Request, username: str = Form(default=""), password: str = Form(default="")):
+    ok_user = hmac.compare_digest(username.strip(), settings.byf_auth_username)
+    ok_pass = hmac.compare_digest(password, settings.byf_auth_password or "")
+    if ok_user and ok_pass:
+        request.session["authed"] = True
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "brand": load_brand(), "error": "Invalid username or password."},
+        status_code=401,
+    )
+
+
+@app.post("/logout")
+def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=303)
+
+
 def _ctx(request: Request, **extra) -> dict:
     ctx = {
         "request": request,
         "brand": load_brand(),
         "llm_enabled": get_llm().enabled,
+        "auth_enabled": settings.auth_enabled,
         "ItemStatus": ItemStatus,
     }
     ctx.update(extra)

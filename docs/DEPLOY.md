@@ -48,6 +48,10 @@ run this; a 4-minute pipeline would also blow past serverless timeouts.)
 ## Security
 
 - Never commit `.env` or the API key (`.gitignore` already excludes `.env`).
-- Set a **spend limit** on the Anthropic key — the dashboard is open by default;
-  add auth (e.g. Render's basic-auth env, or an app-level login) before sharing
-  the URL publicly, since anyone with the link can trigger paid Claude runs.
+- **Protect the URL with the built-in login.** Set **`BYF_AUTH_PASSWORD`** (and
+  optionally `BYF_AUTH_USERNAME`, default `admin`) in the Render dashboard. Login
+  is enforced whenever a password is set — every page redirects to `/login` until
+  you sign in. `render.yaml` auto-generates `BYF_SECRET_KEY` to sign the session
+  cookie. Without a password the dashboard is open (handy for local dev only).
+- Set a **spend limit** on the Anthropic key as a backstop, since an authenticated
+  user can trigger paid Claude runs.

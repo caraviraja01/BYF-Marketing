@@ -20,6 +20,9 @@
       {% else %}
         <span class="badge mock" title="Set ANTHROPIC_API_KEY to enable real generation">● Mock mode</span>
       {% endif %}
+      {% if auth_enabled %}
+        <form method="post" action="/logout" class="logout-form"><button type="submit" class="btn">Log out</button></form>
+      {% endif %}
     </nav>
   </header>
   <main class="container">

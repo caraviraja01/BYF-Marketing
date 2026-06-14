@@ -91,6 +91,19 @@ pre.body { white-space: pre-wrap; background: var(--panel-2); padding: 14px; bor
 .ok { color: var(--brand); }
 .topic-suggestions { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 
+.logout-form { display: inline; margin: 0; }
+.logout-form .btn { padding: 5px 12px; font-size: 13px; }
+
+.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.login-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px; width: 100%; max-width: 360px; text-align: center; }
+.login-logo { margin-bottom: 14px; }
+.login-card h1 { font-size: 22px; margin: 0 0 4px; }
+.login-form { display: flex; flex-direction: column; gap: 14px; margin-top: 22px; text-align: left; }
+.login-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.login-form input[type=text], .login-form input[type=password] { width: 100%; }
+.login-form .btn { margin-top: 6px; }
+.login-error { color: var(--danger); background: rgba(239,68,68,.1); border: 1px solid var(--danger); border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+
 .foot { text-align: center; color: var(--muted); font-size: 13px; padding: 24px; border-top: 1px solid var(--border); }
 
 @media (max-width: 720px) {
