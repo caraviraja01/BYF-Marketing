@@ -26,6 +26,7 @@ class RunStatus(str, enum.Enum):
 
 class ItemStatus(str, enum.Enum):
     SCHEDULED = "scheduled"         # on the calendar, not yet produced
+    PREPARING = "preparing"         # agents are generating script + creatives now
     DRAFT = "draft"                 # script + creative produced
     NEEDS_REVISION = "needs_revision"  # failed verification
     PENDING_REVIEW = "pending_review"  # passed verify, waiting on human

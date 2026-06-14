@@ -70,18 +70,22 @@ def test_full_cycle_schedules_calendar_and_prepares_today():
         assert all(i.scheduled_date for i in run.items)
 
 
-def test_prepare_next_day_prepares_scheduled_items():
+def test_prepare_next_day_marks_then_prepares():
     orch = Orchestrator()
     run_id = orch.run_cycle(topic="cap table basics")
-    count = orch.prepare_next(run_id)
-    assert count >= 1
+    # mark_preparing flags the next scheduled day, then prepare_marked does the work.
+    ids = orch.mark_preparing(run_id=run_id, mode="next")
+    assert ids, "there should be a scheduled day to prepare"
     with session_scope() as session:
-        from app.models import PipelineRun
-
-        run = session.get(PipelineRun, run_id)
-        # The just-prepared day's items now have scripts + creatives.
-        prepared = [i for i in run.items if i.scripts and i.creatives]
-        assert len(prepared) >= 2
+        for item_id in ids:
+            assert session.get(ContentItem, item_id).status == ItemStatus.PREPARING
+    count = orch.prepare_marked(ids)
+    assert count == len(ids)
+    with session_scope() as session:
+        for item_id in ids:
+            item = session.get(ContentItem, item_id)
+            assert item.scripts and item.creatives
+            assert item.status in {ItemStatus.PENDING_REVIEW, ItemStatus.NEEDS_REVISION}
 
 
 def test_approve_publish_and_analytics_loop():

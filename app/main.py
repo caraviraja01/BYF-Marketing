@@ -62,16 +62,18 @@ def health() -> dict[str, str]:
 
 
 @app.api_route("/tasks/prepare-daily", methods=["GET", "POST"])
-def prepare_daily(token: str = ""):
+def prepare_daily(background_tasks: BackgroundTasks, token: str = ""):
     """Cron target: prepare today's scheduled content across all runs.
 
     Protected by BYF_CRON_TOKEN (point Render Cron / an external cron here).
+    Marks due items now and prepares them in the background.
     """
     expected = settings.byf_cron_token
     if not expected or not hmac.compare_digest(token, expected):
         return JSONResponse({"error": "invalid or missing token"}, status_code=403)
-    prepared = orchestrator.prepare_due()
-    return {"prepared": prepared}
+    ids = orchestrator.mark_preparing(mode="due")
+    background_tasks.add_task(orchestrator.prepare_marked, ids)
+    return {"scheduled_for_preparation": len(ids)}
 
 
 @app.get("/login")
@@ -260,8 +262,15 @@ def publish_item(item_id: int):
 
 
 @app.post("/runs/{run_id}/prepare-next")
-def prepare_next(run_id: int):
-    orchestrator.prepare_next(run_id)
+def prepare_next(request: Request, run_id: int, background_tasks: BackgroundTasks):
+    # Preparing runs the agents (minutes in live mode) — mark + run in background so
+    # the request returns immediately; the page auto-refreshes while items prepare.
+    ids = orchestrator.mark_preparing(run_id=run_id, mode="next")
+    if ids:
+        background_tasks.add_task(orchestrator.prepare_marked, ids)
+        _flash(request, f"Preparing {len(ids)} item(s)… this takes a few minutes. The page refreshes automatically.")
+    else:
+        _flash(request, "Nothing left to prepare for this cycle.", "warn")
     return RedirectResponse(url=f"/runs/{run_id}#content", status_code=303)
 
 

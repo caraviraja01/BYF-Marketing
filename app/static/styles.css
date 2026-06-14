@@ -118,6 +118,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: u
 
 .status { font-size: 12px; padding: 3px 11px; border-radius: 999px; text-transform: capitalize; background: var(--panel-2); }
 .status.pending_review, .status.awaiting_review, .status.scheduled { color: var(--warn); }
+.status.preparing { color: var(--brand-2); }
 .status.approved { color: var(--brand-2); }
 .status.published, .status.completed { color: var(--brand); }
 .status.rejected, .status.failed, .status.needs_revision { color: var(--danger); }

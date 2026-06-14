@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ item.title }} · BYF Marketing{% endblock %}
 {% set generating = (item.creatives or []) | selectattr('status', 'equalto', 'generating') | list %}
-{% block head %}{% if generating %}<meta http-equiv="refresh" content="8" />{% endif %}{% endblock %}
+{% block head %}{% if generating or item.status.value == 'preparing' %}<meta http-equiv="refresh" content="8" />{% endif %}{% endblock %}
 {% block content %}
 
 <p><a href="/runs/{{ item.run_id }}#content" class="muted">← Cycle #{{ item.run_id }}</a></p>
@@ -17,7 +17,13 @@
   </div>
 </div>
 
-{% if item.status.value == 'scheduled' %}
+{% if item.status.value == 'preparing' %}
+<div class="card highlight">
+  <h2>⏳ Preparing…</h2>
+  <p class="muted">The agents are generating 3 script options and 3 creative concepts.
+  This takes a few minutes in live mode — the page refreshes automatically.</p>
+</div>
+{% elif item.status.value == 'scheduled' %}
 <div class="card highlight">
   <h2>🗓️ Scheduled{% if item.scheduled_date %} for {{ item.scheduled_date.strftime('%A, %b %d') }}{% endif %}</h2>
   <p class="muted">This calendar item isn't prepared yet. It will get its 3 script options and

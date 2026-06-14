@@ -202,40 +202,51 @@ class Orchestrator:
         item.status = ItemStatus.PENDING_REVIEW if verification.passed else ItemStatus.NEEDS_REVISION
 
     # ── Daily drip preparation (calendar-driven) ───────────────────────────────
-    def prepare_due(self, *, run_id: int | None = None, on_date: date | None = None) -> int:
-        """Prepare every SCHEDULED item whose date is due (<= on_date). Returns count.
+    def mark_preparing(self, *, run_id: int | None = None, mode: str = "next",
+                       on_date: date | None = None) -> list[int]:
+        """Flag the items to prepare as PREPARING and return their ids.
 
-        Called by the daily cron endpoint (all runs) or the manual button (one run).
+        mode='next' → the earliest still-scheduled day of a run.
+        mode='due'  → every scheduled item due on/before ``on_date`` (cron).
+        Marking first gives instant UI feedback before the slow background work.
         """
         on_date = on_date or date.today()
-        prepared = 0
         with session_scope() as session:
             q = select(ContentItem).where(ContentItem.status == ItemStatus.SCHEDULED)
             if run_id is not None:
                 q = q.where(ContentItem.run_id == run_id)
-            for item in session.scalars(q).all():
-                if item.scheduled_date and item.scheduled_date <= on_date:
+            items = sorted(session.scalars(q).all(), key=lambda i: i.scheduled_date or on_date)
+            if not items:
+                return []
+            if mode == "next":
+                target_date = items[0].scheduled_date
+                chosen = [i for i in items if i.scheduled_date == target_date]
+            else:  # due
+                chosen = [i for i in items if i.scheduled_date and i.scheduled_date <= on_date]
+            for item in chosen:
+                item.status = ItemStatus.PREPARING
+            return [i.id for i in chosen]
+
+    def prepare_marked(self, item_ids: list[int]) -> int:
+        """Run the agents for items flagged PREPARING. Safe for a background task."""
+        prepared = 0
+        for item_id in item_ids:
+            with session_scope() as session:
+                item = session.get(ContentItem, item_id)
+                if not item or item.status != ItemStatus.PREPARING:
+                    continue
+                try:
                     self._prepare_item(item, [], strict=False)
                     prepared += 1
+                except Exception:
+                    log.exception("Failed to prepare item %s", item_id)
+                    item.status = ItemStatus.SCHEDULED  # let the user retry
         return prepared
 
-    def prepare_next(self, run_id: int) -> int:
-        """Manually prepare the earliest still-scheduled day for a run. Returns count."""
-        with session_scope() as session:
-            items = session.scalars(
-                select(ContentItem)
-                .where(ContentItem.run_id == run_id, ContentItem.status == ItemStatus.SCHEDULED)
-                .order_by(ContentItem.scheduled_date)
-            ).all()
-            if not items:
-                return 0
-            target = items[0].scheduled_date
-            count = 0
-            for item in items:
-                if item.scheduled_date == target:
-                    self._prepare_item(item, [], strict=False)
-                    count += 1
-            return count
+    def prepare_due_now(self, *, on_date: date | None = None) -> int:
+        """Synchronous mark + prepare of all due items (used by the cron worker)."""
+        ids = self.mark_preparing(mode="due", on_date=on_date)
+        return self.prepare_marked(ids)
 
     def _verify(self, item: ContentItem, warnings: list[str], strict: bool) -> VerificationResult:
         return self._run_agent(

@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Cycle #{{ run.id }} · BYF Marketing{% endblock %}
 {% set in_progress = run.status.value in ['researching', 'strategising', 'producing'] %}
-{% block head %}{% if in_progress %}<meta http-equiv="refresh" content="6" />{% endif %}{% endblock %}
+{% set preparing = run.items | selectattr('status.value', 'equalto', 'preparing') | list %}
+{% block head %}{% if in_progress or preparing %}<meta http-equiv="refresh" content="6" />{% endif %}{% endblock %}
 {% block content %}
 
 <p><a href="/" class="muted">← Dashboard</a></p>
@@ -120,7 +121,9 @@
     <div class="card">
       <div class="hero" style="margin:0 0 8px">
         <p class="muted" style="margin:0">Calendar items are prepared one day at a time. Each prepared item has 3 script options + 3 creative concepts — open it to choose, verify and post.</p>
-        {% if scheduled %}
+        {% if preparing %}
+        <span class="status preparing">⏳ Preparing {{ preparing|length }}… (auto-refreshing)</span>
+        {% elif scheduled %}
         <form method="post" action="/runs/{{ run.id }}/prepare-next">
           <button class="btn primary" type="submit">⚙️ Prepare next day ({{ scheduled|length }} scheduled)</button>
         </form>
