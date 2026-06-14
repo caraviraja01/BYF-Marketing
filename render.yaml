@@ -46,3 +46,11 @@ services:
       # Simulate publishing until real social credentials are added.
       - key: BYF_SIMULATE_PUBLISH
         value: "true"
+      # Keep the dashboard populated even if a live agent call fails.
+      - key: BYF_FALLBACK_TO_MOCK_ON_ERROR
+        value: "true"
+      # Higgsfield video generation (set as secrets in the dashboard).
+      - key: HIGGSFIELD_API_KEY
+        sync: false
+      - key: HIGGSFIELD_SECRET
+        sync: false

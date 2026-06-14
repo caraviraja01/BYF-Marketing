@@ -31,5 +31,25 @@
   <footer class="foot">
     Educational content workflow · Human approval required before publishing.
   </footer>
+  <script>
+    // Lightweight tabs: <div class="tabs"> with .tab buttons (data-target) + .tab-panel by id.
+    document.querySelectorAll('.tabs').forEach(function (group) {
+      var tabs = group.querySelectorAll('.tab');
+      var panels = group.querySelectorAll('.tab-panel');
+      function activate(id) {
+        tabs.forEach(function (t) { t.classList.toggle('active', t.dataset.target === id); });
+        panels.forEach(function (p) { p.classList.toggle('active', p.id === id); });
+      }
+      tabs.forEach(function (t) {
+        t.addEventListener('click', function () {
+          activate(t.dataset.target);
+          history.replaceState(null, '', '#' + t.dataset.target);
+        });
+      });
+      var hash = (location.hash || '').replace('#', '');
+      var has = Array.prototype.some.call(panels, function (p) { return p.id === hash; });
+      activate(has ? hash : (tabs[0] && tabs[0].dataset.target));
+    });
+  </script>
 </body>
 </html>

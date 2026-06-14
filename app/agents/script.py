@@ -7,14 +7,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..schemas import ContentIdea, Script
+from ..schemas import ContentIdea, Script, ScriptSet
 from .base import BaseAgent
 
 
-class ScriptAgent(BaseAgent[Script]):
+class ScriptAgent(BaseAgent[ScriptSet]):
     name = "script"
     role = "Scriptwriting — platform-native copy"
-    output_model = Script
+    output_model = ScriptSet
+    n_variants = 3
 
     def expertise(self) -> str:
         return (
@@ -31,49 +32,63 @@ class ScriptAgent(BaseAgent[Script]):
     def build_user_prompt(self, *, idea: dict[str, Any] | ContentIdea, **_: Any) -> str:
         data = idea.model_dump() if isinstance(idea, ContentIdea) else idea
         return (
-            "Write the full, publish-ready script for this content idea.\n\n"
+            f"Write {self.n_variants} DISTINCT, publish-ready script variants for this "
+            "content idea so a human can pick the best one.\n\n"
             f"IDEA:\n{data}\n\n"
             f"Write natively for {data.get('platform')} as a {data.get('format')}. "
-            "Provide: a refined hook, the full body (formatted for the platform — use "
-            "line breaks / slide markers as appropriate), a soft CTA, 5–12 relevant "
-            "hashtags, and clear visual direction for the designer. If specific financial "
-            "instruments or returns are mentioned, append the brand's required disclaimer. "
-            "For video formats, estimate duration in seconds."
+            f"Make the {self.n_variants} variants genuinely different in approach (e.g. "
+            "story-led, data/number-led, contrarian/myth-bust) — set each variant's "
+            "`angle` to a short label naming that approach. Each variant needs: a refined "
+            "hook, the full body (platform-formatted, with line breaks / slide markers), a "
+            "soft CTA, 5–12 relevant hashtags, and clear visual direction for the designer. "
+            "If specific financial matters or numbers are mentioned, append the brand's "
+            "required disclaimer. For video formats, estimate duration in seconds. "
+            "Return them under the `variants` array."
         )
 
-    def mock(self, *, idea: dict[str, Any] | ContentIdea, **_: Any) -> Script:
+    def mock(self, *, idea: dict[str, Any] | ContentIdea, **_: Any) -> ScriptSet:
         data = idea.model_dump() if isinstance(idea, ContentIdea) else idea
         platform = data.get("platform", "instagram")
         fmt = data.get("format", "carousel")
+        km = data.get("key_message", "Get your numbers boardroom-ready before you pitch.")
+        cta = data.get("cta", "Schedule a CFO Strategy Call.")
         disclaimer = self.brand.compliance.get("required_disclaimer", "").strip().strip('"')
-        body = (
-            f"{data.get('hook', 'Here is what investors actually check first.')}\n\n"
-            "1) Clean, reconciled books — no surprises in due diligence.\n"
-            "2) A clear cash flow view: runway, burn and a 13-week forecast.\n"
-            "3) Unit economics and a defensible financial model behind the ask.\n"
-            "4) Compliance in order — GST, TDS and MCA filings up to date.\n\n"
-            f"{data.get('key_message', 'Get your numbers boardroom-ready before you pitch.')}\n\n"
-            f"{disclaimer}"
+        dur = 45 if fmt in {"reel", "short", "video"} else None
+        hashtags = [
+            "#startupfinance", "#virtualcfo", "#fundraising",
+            "#cashflow", "#founders", "#taxation", "#beyondyourfinance",
+        ]
+        vis = (
+            "Clean, professional brand palette. Bold headline per slide, one idea each, "
+            "large readable type, a simple icon or mini-chart/KPI per point. Final "
+            "slide: CTA + disclaimer in small but legible text."
         )
-        return Script(
-            platform=platform,
-            format=fmt,
-            hook=data.get("hook", "Investors don't reject decks — they reject messy financials."),
-            body=body,
-            cta=data.get("cta", "Schedule a CFO Strategy Call."),
-            hashtags=[
-                "#startupfinance",
-                "#virtualcfo",
-                "#fundraising",
-                "#cashflow",
-                "#founders",
-                "#taxation",
-                "#beyondyourfinance",
-            ],
-            visual_direction=(
-                "Clean, professional brand palette. Bold headline per slide, one idea each, "
-                "large readable type, a simple icon or mini-chart/KPI to anchor each point. "
-                "Final slide: CTA + disclaimer in small but legible text."
+
+        def build(angle: str, hook: str, steps: str) -> Script:
+            return Script(
+                angle=angle, platform=platform, format=fmt, hook=hook,
+                body=f"{hook}\n\n{steps}\n\n{km}\n\n{disclaimer}",
+                cta=cta, hashtags=hashtags, visual_direction=vis,
+                estimated_duration_sec=dur,
+            )
+
+        return ScriptSet(variants=[
+            build(
+                "Checklist / practical",
+                "Investors don't reject decks — they reject messy financials.",
+                "1) Clean, reconciled books.\n2) Cash flow: runway, burn, 13-week forecast.\n"
+                "3) Unit economics + a defensible model.\n4) GST/TDS/MCA filings up to date.",
             ),
-            estimated_duration_sec=45 if fmt in {"reel", "short", "video"} else None,
-        )
+            build(
+                "Data / number-led",
+                "73% of founders underestimate how long diligence takes. Here's the fix.",
+                "→ Diligence-ready books save ~6 weeks pre-raise.\n→ A 13-week cash view kills"
+                " 'how long is your runway?' surprises.\n→ Clean filings remove deal-blocking flags.",
+            ),
+            build(
+                "Story / contrarian",
+                "A great product won't save a messy cap table. Ask any founder who's raised.",
+                "The pitch gets you the meeting. The numbers close the round.\n"
+                "Tidy books, a clear model, and compliance in order signal a team investors trust.",
+            ),
+        ])

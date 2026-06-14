@@ -24,7 +24,17 @@ from .integrations.analytics_providers import AnalyticsProvider
 from .integrations.social import get_publisher
 from .integrations.web_research import WebResearchConnector
 from .models import ContentItem, ItemStatus, PipelineRun, RunStatus
-from .schemas import AnalyticsInsight, ContentIdea, ContentStrategy, ResearchBrief, Script
+from .schemas import (
+    AnalyticsInsight,
+    ContentIdea,
+    ContentStrategy,
+    CreativeAsset,
+    CreativeSet,
+    ResearchBrief,
+    Script,
+    ScriptSet,
+    VerificationResult,
+)
 
 log = logging.getLogger("byf.orchestrator")
 
@@ -32,6 +42,13 @@ log = logging.getLogger("byf.orchestrator")
 def _simulate_publish() -> bool:
     """In dev we simulate publishing (clearly labelled) so the full loop is demoable."""
     return os.getenv("BYF_SIMULATE_PUBLISH", "true").lower() in {"1", "true", "yes"}
+
+
+def _fallback_on_error() -> bool:
+    """When a live agent call fails, fall back to its draft output and warn instead
+    of failing the whole run. Keeps the dashboard populated; set false to surface
+    raw errors instead."""
+    return os.getenv("BYF_FALLBACK_TO_MOCK_ON_ERROR", "true").lower() in {"1", "true", "yes"}
 
 
 @dataclass
@@ -70,6 +87,7 @@ class Orchestrator:
         Safe to call from a background task: failures are recorded on the run
         (status=FAILED, error set) rather than raised, unless ``raise_on_error``.
         """
+        warnings: list[str] = []
         with session_scope() as session:
             run = session.get(PipelineRun, run_id)
             if run is None:
@@ -77,29 +95,53 @@ class Orchestrator:
             try:
                 log.info("Run %s: research", run_id)
                 signals = self.web.fetch_signals(run.topic)
-                brief: ResearchBrief = self.research.run(topic=run.topic, web_signals=signals)
+                brief: ResearchBrief = self._run_agent(
+                    self.research, "research", warnings, raise_on_error,
+                    topic=run.topic, web_signals=signals,
+                )
                 run.research = brief.model_dump()
                 run.status = RunStatus.STRATEGISING
 
                 log.info("Run %s: strategy", run_id)
-                strategy: ContentStrategy = self.strategy.run(
-                    research=brief, items_per_run=items_per_run
+                strategy: ContentStrategy = self._run_agent(
+                    self.strategy, "strategy", warnings, raise_on_error,
+                    research=brief, items_per_run=items_per_run,
                 )
                 run.strategy = strategy.model_dump()
                 run.status = RunStatus.PRODUCING
                 session.flush()
 
                 for idea in strategy.ideas:
-                    self._produce_item(session, run_id, idea)
+                    self._produce_item(session, run_id, idea, warnings, raise_on_error)
 
+                run.warnings = warnings or None
                 run.status = RunStatus.AWAITING_REVIEW
-                log.info("Run %s: awaiting human review", run_id)
+                log.info("Run %s: awaiting review (%d warnings)", run_id, len(warnings))
             except Exception as exc:
                 log.exception("Run %s failed", run_id)
                 run.status = RunStatus.FAILED
                 run.error = str(exc)
+                run.warnings = warnings or None
                 if raise_on_error:
                     raise
+
+    def _run_agent(self, agent: Any, label: str, warnings: list[str], strict: bool, **inputs: Any):
+        """Run an agent; on a live failure fall back to its draft output and warn.
+
+        This is what stops a single flaky/over-long Claude response from turning the
+        whole run into a dead 'Failed' page.
+        """
+        try:
+            return agent.run(**inputs)
+        except Exception as exc:
+            log.exception("Agent '%s' failed", label)
+            if strict or not _fallback_on_error() or not agent.llm.enabled:
+                raise
+            warnings.append(
+                f"{label}: live generation failed ({type(exc).__name__}: {exc}); "
+                "used a draft fallback. Re-run to retry."
+            )
+            return agent.mock(**inputs)
 
     def run_cycle(self, *, topic: str | None = None, items_per_run: int = 4) -> int:
         """Synchronous create + execute (used by the CLI and tests). Returns the run id."""
@@ -107,24 +149,78 @@ class Orchestrator:
         self.execute_run(run_id, items_per_run=items_per_run, raise_on_error=True)
         return run_id
 
-    def _produce_item(self, session: Any, run_id: int, idea: ContentIdea) -> None:
-        script: Script = self.script.run(idea=idea)
-        creative = self.creative.run(script=script)
-        verification = self.verify.run(script=script, creative=creative.model_dump())
+    def _produce_item(
+        self, session: Any, run_id: int, idea: ContentIdea,
+        warnings: list[str], strict: bool,
+    ) -> None:
+        script_set: ScriptSet = self._run_agent(self.script, "script", warnings, strict, idea=idea)
+        creative_set: CreativeSet = self._run_agent(
+            self.creative, "creative", warnings, strict, script=script_set.variants[0]
+        )
 
-        status = ItemStatus.PENDING_REVIEW if verification.passed else ItemStatus.NEEDS_REVISION
         item = ContentItem(
             run_id=run_id,
             platform=idea.platform,
             title=idea.title,
             pillar=idea.pillar,
-            status=status,
+            status=ItemStatus.PENDING_REVIEW,
             idea=idea.model_dump(),
-            script=script.model_dump(),
-            creative=creative.model_dump(),
-            verification=verification.model_dump(),
+            scripts=[s.model_dump() for s in script_set.variants],
+            selected_script=0,
+            creatives=[c.model_dump() for c in creative_set.variants],
+            selected_creative=0,
         )
+        # Verify the currently-selected script/creative pair.
+        verification = self._verify(item, warnings, strict)
+        item.verification = verification.model_dump()
+        item.status = ItemStatus.PENDING_REVIEW if verification.passed else ItemStatus.NEEDS_REVISION
         session.add(item)
+
+    def _verify(self, item: ContentItem, warnings: list[str], strict: bool) -> VerificationResult:
+        return self._run_agent(
+            self.verify, "verify", warnings, strict,
+            script=item.script or {}, creative=item.creative or {},
+        )
+
+    # ── Variant selection (human picks one of the 3) ───────────────────────────
+    def select_script(self, item_id: int, index: int) -> None:
+        with session_scope() as session:
+            item = session.get(ContentItem, item_id)
+            if not item:
+                raise ValueError(f"Content item {item_id} not found")
+            if not (0 <= index < len(item.scripts or [])):
+                raise ValueError("Script index out of range")
+            item.selected_script = index
+            # Re-verify against the newly-chosen script.
+            result = self._verify(item, [], strict=False)
+            item.verification = result.model_dump()
+            if item.status in (ItemStatus.PENDING_REVIEW, ItemStatus.NEEDS_REVISION):
+                item.status = (
+                    ItemStatus.PENDING_REVIEW if result.passed else ItemStatus.NEEDS_REVISION
+                )
+
+    def select_creative(self, item_id: int, index: int) -> None:
+        with session_scope() as session:
+            item = session.get(ContentItem, item_id)
+            if not item:
+                raise ValueError(f"Content item {item_id} not found")
+            if not (0 <= index < len(item.creatives or [])):
+                raise ValueError("Creative index out of range")
+            item.selected_creative = index
+
+    def realize_creative(self, item_id: int) -> dict[str, Any]:
+        """Generate the actual asset for the selected creative concept (Canva/Higgsfield)."""
+        with session_scope() as session:
+            item = session.get(ContentItem, item_id)
+            if not item or not item.creatives:
+                raise ValueError(f"Content item {item_id} has no creative to generate")
+            idx = item.selected_creative
+            asset = CreativeAsset.model_validate(item.creatives[idx])
+            asset = self.creative.realize(asset)
+            creatives = list(item.creatives)
+            creatives[idx] = asset.model_dump()
+            item.creatives = creatives  # reassign so SQLAlchemy detects the change
+            return creatives[idx]
 
     # ── Human gate ─────────────────────────────────────────────────────────────
     def approve(self, item_id: int, note: str | None = None) -> None:

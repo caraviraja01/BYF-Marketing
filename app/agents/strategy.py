@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..schemas import ContentIdea, ContentStrategy, ResearchBrief
+from ..schemas import CalendarEntry, ContentIdea, ContentStrategy, ResearchBrief
 from .base import BaseAgent
 
 
@@ -43,8 +43,13 @@ class StrategyAgent(BaseAgent[ContentStrategy]):
             f"Produce exactly {items_per_run} content ideas spread across these enabled "
             f"channels: {channels}. Lead with the recommended focus, then diversify. "
             "Each idea must include the pillar id, platform, format, funnel stage, a "
-            "scroll-stopping hook, the single key message, and a soft CTA. Add brief "
-            "posting notes (sequencing / repurposing advice)."
+            "scroll-stopping hook, the single key message, and a soft CTA.\n\n"
+            "Also produce:\n"
+            "- `calendar_7_day`: a concrete 7-day posting plan (one+ entries per day with "
+            "day, platform, pillar, format, title, funnel_stage) respecting each channel's "
+            "weekly cadence.\n"
+            "- `monthly_themes`: 4 weekly themes for a 30-day view.\n"
+            "- `posting_notes`: brief sequencing / repurposing advice."
         )
 
     def mock(self, *, research: dict[str, Any] | ResearchBrief, **_: Any) -> ContentStrategy:
@@ -100,6 +105,35 @@ class StrategyAgent(BaseAgent[ContentStrategy]):
                     key_message="Common, avoidable errors — and the practical fix for each.",
                     cta="Connect with Our Finance Experts.",
                 ),
+            ],
+            calendar_7_day=[
+                CalendarEntry(day="Mon", platform="linkedin", pillar="startup_finance",
+                              format="insight post", funnel_stage="consideration",
+                              title=f"{topic}: a CFO's pre-raise checklist"),
+                CalendarEntry(day="Tue", platform="instagram", pillar="virtual_cfo",
+                              format="carousel", funnel_stage="awareness",
+                              title="The 13-week cash flow framework founders track too late"),
+                CalendarEntry(day="Wed", platform="twitter", pillar="taxation",
+                              format="thread", funnel_stage="awareness",
+                              title="GST & TDS mistakes that cost growing businesses"),
+                CalendarEntry(day="Thu", platform="youtube", pillar="startup_finance",
+                              format="short", funnel_stage="awareness",
+                              title="Investor-ready financials in 60 seconds"),
+                CalendarEntry(day="Fri", platform="instagram", pillar="founder_mistakes",
+                              format="reel", funnel_stage="awareness",
+                              title="3 finance mistakes that kill a raise"),
+                CalendarEntry(day="Sat", platform="linkedin", pillar="esg",
+                              format="insight post", funnel_stage="awareness",
+                              title="BRSR readiness: what listed companies must prepare now"),
+                CalendarEntry(day="Sun", platform="twitter", pillar="virtual_cfo",
+                              format="thread", funnel_stage="consideration",
+                              title="When should a startup hire a Virtual CFO?"),
+            ],
+            monthly_themes=[
+                "Week 1 — Fundraising & investor readiness",
+                "Week 2 — Cash flow & profitability (Virtual CFO)",
+                "Week 3 — Taxation & compliance (GST/TDS/MCA)",
+                "Week 4 — ESG/BRSR & finance automation",
             ],
             posting_notes=(
                 "Lead with the LinkedIn insight post mid-week morning for founder/B2B reach, "

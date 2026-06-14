@@ -2,7 +2,7 @@
 {% block title %}{{ item.title }} · BYF Marketing{% endblock %}
 {% block content %}
 
-<p><a href="/runs/{{ item.run_id }}" class="muted">← Cycle #{{ item.run_id }}</a></p>
+<p><a href="/runs/{{ item.run_id }}#content" class="muted">← Cycle #{{ item.run_id }}</a></p>
 
 <div class="hero">
   <div>
@@ -15,74 +15,124 @@
   </div>
 </div>
 
-{% set v = item.verification or {} %}
-<section class="card {% if not v.get('passed') %}warn{% endif %}">
-  <h2>5 · Verification — score {{ v.get('score','—') }}/100
-    {% if v.get('compliance_ok') %}<span class="chip ok">compliance ✓</span>{% else %}<span class="chip bad">compliance ✗</span>{% endif %}
-  </h2>
-  <p>{{ v.get('summary','') }}</p>
-  {% if v.get('issues') %}
-  <ul class="issues">
-    {% for issue in v.get('issues') %}
-      <li class="sev-{{ issue.severity }}"><strong>[{{ issue.severity }} · {{ issue.category }}]</strong> {{ issue.detail }}<br><span class="muted">Fix: {{ issue.suggested_fix }}</span></li>
+<div class="tabs">
+  <nav class="tab-bar">
+    <button class="tab" data-target="script">✍️ Script ({{ item.scripts|length }} options)</button>
+    <button class="tab" data-target="creative">🎨 Creative ({{ item.creatives|length }} options)</button>
+    <button class="tab" data-target="verify">✅ Verify &amp; Post</button>
+  </nav>
+
+  {# ── Script variants ────────────────────────────────────────────────── #}
+  <section class="tab-panel" id="script">
+    <p class="muted">Pick the script you like best. The chosen one is verified and posted.</p>
+    <div class="variant-grid">
+    {% for sc in item.scripts %}
+      <div class="card variant {% if loop.index0 == item.selected_script %}chosen{% endif %}">
+        <div class="variant-head">
+          <span class="chip">Option {{ loop.index }}{% if sc.angle %} · {{ sc.angle }}{% endif %}</span>
+          {% if loop.index0 == item.selected_script %}<span class="chip ok">✓ Selected</span>{% endif %}
+        </div>
+        <p><strong>Hook:</strong> {{ sc.hook }}</p>
+        <pre class="body">{{ sc.body }}</pre>
+        <p><strong>CTA:</strong> {{ sc.cta }}</p>
+        <p class="muted small">{{ sc.hashtags | join(' ') }}</p>
+        {% if loop.index0 != item.selected_script %}
+        <form method="post" action="/items/{{ item.id }}/select-script" class="inline">
+          <input type="hidden" name="index" value="{{ loop.index0 }}" />
+          <button class="btn" type="submit">Choose this script</button>
+        </form>
+        {% endif %}
+      </div>
     {% endfor %}
-  </ul>
-  {% endif %}
-</section>
+    </div>
+  </section>
 
-{% set s = item.script or {} %}
-<section class="card">
-  <h2>3 · Script</h2>
-  <p><strong>Hook:</strong> {{ s.get('hook','') }}</p>
-  <pre class="body">{{ s.get('body','') }}</pre>
-  <p><strong>CTA:</strong> {{ s.get('cta','') }}</p>
-  <p class="muted">{{ s.get('hashtags', []) | join(' ') }}</p>
-</section>
+  {# ── Creative variants ──────────────────────────────────────────────── #}
+  <section class="tab-panel" id="creative">
+    <p class="muted">Pick a visual concept, then generate it (carousels/images via Canva, video via Higgsfield).</p>
+    <div class="variant-grid">
+    {% for cr in item.creatives %}
+      <div class="card variant {% if loop.index0 == item.selected_creative %}chosen{% endif %}">
+        <div class="variant-head">
+          <span class="chip">Option {{ loop.index }}{% if cr.concept %} · {{ cr.concept }}{% endif %}</span>
+          <span class="chip">{{ cr.type }}</span>
+          {% if loop.index0 == item.selected_creative %}<span class="chip ok">✓ Selected</span>{% endif %}
+        </div>
+        {% if cr.asset_url %}
+          {% if cr.type == 'video' %}<video src="{{ cr.asset_url }}" controls class="creative-media"></video>
+          {% else %}<img src="{{ cr.asset_url }}" alt="creative" class="creative-media" />{% endif %}
+        {% endif %}
+        <p>{{ cr.brief }}</p>
+        {% if cr.slides %}<ol class="slides">{% for sl in cr.slides %}<li>{{ sl }}</li>{% endfor %}</ol>{% endif %}
+        <p class="muted small">Status: {{ cr.status }}{% if cr.provider %} · {{ cr.provider }}{% endif %}
+          {% if cr.error %}<br><span class="sev-warning">{{ cr.error }}</span>{% endif %}</p>
+        {% if loop.index0 != item.selected_creative %}
+        <form method="post" action="/items/{{ item.id }}/select-creative" class="inline">
+          <input type="hidden" name="index" value="{{ loop.index0 }}" />
+          <button class="btn" type="submit">Choose this concept</button>
+        </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+    </div>
+    <div class="card">
+      <form method="post" action="/items/{{ item.id }}/generate-creative" class="inline">
+        <button class="btn primary" type="submit">⚙️ Generate selected creative</button>
+      </form>
+      <span class="muted small">Generates the chosen concept now (needs Canva/Higgsfield keys; otherwise keeps the brief).</span>
+    </div>
+  </section>
 
-{% set c = item.creative or {} %}
-<section class="card">
-  <h2>4 · Creative <span class="chip">{{ c.get('type','') }}</span><span class="chip">{{ c.get('status','') }}</span></h2>
-  {% if c.get('asset_url') %}<p><a href="{{ c.get('asset_url') }}" target="_blank">View generated asset →</a></p>{% endif %}
-  <p>{{ c.get('brief','') }}</p>
-  {% if c.get('slides') %}
-  <ol class="slides">
-    {% for slide in c.get('slides') %}<li>{{ slide }}</li>{% endfor %}
-  </ol>
-  {% endif %}
-</section>
+  {# ── Verify & post ──────────────────────────────────────────────────── #}
+  <section class="tab-panel" id="verify">
+    {% set v = item.verification or {} %}
+    <div class="card {% if not v.get('passed') %}warn{% endif %}">
+      <h2>Verification — score {{ v.get('score','—') }}/100
+        {% if v.get('compliance_ok') %}<span class="chip ok">compliance ✓</span>
+        {% else %}<span class="chip bad">compliance ✗</span>{% endif %}
+      </h2>
+      <p>{{ v.get('summary','') }}</p>
+      {% if v.get('issues') %}
+      <ul class="issues">
+        {% for issue in v.get('issues') %}
+          <li class="sev-{{ issue.severity }}"><strong>[{{ issue.severity }} · {{ issue.category }}]</strong>
+            {{ issue.detail }}<br><span class="muted">Fix: {{ issue.suggested_fix }}</span></li>
+        {% endfor %}
+      </ul>{% endif %}
+      <p class="muted small">Verification reflects the currently-selected script &amp; creative.</p>
+    </div>
 
-{% if item.analytics %}
-<section class="card">
-  <h2>6 · Analytics</h2>
-  {% set a = item.analytics %}
-  <div class="metrics">
-    <span>👁 {{ a.impressions }}</span><span>❤ {{ a.likes }}</span><span>💬 {{ a.comments }}</span>
-    <span>🔁 {{ a.shares }}</span><span>🔖 {{ a.saves }}</span><span>📈 {{ a.engagement_rate }}%</span>
-  </div>
-</section>
-{% endif %}
+    <div class="card actions">
+      <h2>🧑 Review &amp; publish</h2>
+      {% if item.review_note %}<p class="muted">Your note: {{ item.review_note }}</p>{% endif %}
+      {% if item.status.value in ['pending_review', 'needs_revision'] %}
+        <form method="post" action="/items/{{ item.id }}/approve" class="inline">
+          <input type="text" name="note" placeholder="Optional note" />
+          <button class="btn primary" type="submit">✓ Approve</button>
+        </form>
+        <form method="post" action="/items/{{ item.id }}/reject" class="inline">
+          <button class="btn danger" type="submit">✗ Reject</button>
+        </form>
+      {% elif item.status.value == 'approved' %}
+        <form method="post" action="/items/{{ item.id }}/publish" class="inline">
+          <button class="btn primary" type="submit">🚀 Publish</button>
+        </form>
+        <p class="muted">Approved. Publishing uses the {{ item.platform }} connector; without credentials it runs as a clearly-labelled simulation.</p>
+      {% elif item.status.value == 'published' %}
+        <p class="ok">✓ Published — ref: <code>{{ item.published_ref }}</code></p>
+      {% elif item.status.value == 'rejected' %}
+        <p class="muted">Rejected. Re-run the cycle to regenerate.</p>
+      {% endif %}
+    </div>
 
-<section class="card actions">
-  <h2>🧑 Review & publish</h2>
-  {% if item.review_note %}<p class="muted">Your note: {{ item.review_note }}</p>{% endif %}
-  {% if item.status.value in ['pending_review', 'needs_revision'] %}
-    <form method="post" action="/items/{{ item.id }}/approve" class="inline">
-      <input type="text" name="note" placeholder="Optional note" />
-      <button class="btn primary" type="submit">✓ Approve</button>
-    </form>
-    <form method="post" action="/items/{{ item.id }}/reject" class="inline">
-      <button class="btn danger" type="submit">✗ Reject</button>
-    </form>
-  {% elif item.status.value == 'approved' %}
-    <form method="post" action="/items/{{ item.id }}/publish" class="inline">
-      <button class="btn primary" type="submit">🚀 Publish</button>
-    </form>
-    <p class="muted">Approved. Publishing uses the platform connector ({{ item.platform }}); without credentials it runs as a clearly-labelled simulation.</p>
-  {% elif item.status.value == 'published' %}
-    <p class="ok">✓ Published — ref: <code>{{ item.published_ref }}</code></p>
-  {% elif item.status.value == 'rejected' %}
-    <p class="muted">Rejected. Re-run the cycle to regenerate.</p>
-  {% endif %}
-</section>
+    {% if item.analytics %}
+    <div class="card"><h2>Analytics</h2>{% set a = item.analytics %}
+      <div class="metrics"><span>👁 {{ a.impressions }}</span><span>❤ {{ a.likes }}</span>
+        <span>💬 {{ a.comments }}</span><span>🔁 {{ a.shares }}</span><span>🔖 {{ a.saves }}</span>
+        <span>📈 {{ a.engagement_rate }}%</span></div>
+    </div>
+    {% endif %}
+  </section>
+</div>
 
 {% endblock %}

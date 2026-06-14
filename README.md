@@ -52,9 +52,15 @@ python -m app.cli run            # let the Research agent pick the topic
 |------------|--------|------------------|
 | All 6 agents | **Real** (Claude) | `app/agents/*` — runs live with an API key |
 | Trend / competitor web data | Pluggable | `app/integrations/web_research.py` |
-| Canva creatives | Pluggable | `app/integrations/canva.py` |
+| Canva creatives (images / carousels) | Pluggable | `app/integrations/canva.py` |
+| Higgsfield video generation | **Real** (submit + poll) | `app/integrations/higgsfield.py` |
 | Social publishing (LinkedIn/IG/YouTube/X) | Stubbed behind one interface | `app/integrations/social/*` |
 | Analytics fetch | Stubbed behind one interface | `app/integrations/analytics_providers.py` |
+
+**Human-in-the-loop choices:** the Script and Creative agents each produce **3
+variants** per content item; you pick one per tab in the dashboard, the chosen pair
+is re-verified, and only then is it approved/published. If a live agent call fails,
+the run falls back to a draft and flags it (a warning) rather than dying.
 
 Each connector implements a clean interface, so swapping the stub for a live API is a
 single-file change — no agent or pipeline code moves.

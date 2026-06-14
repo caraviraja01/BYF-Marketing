@@ -106,6 +106,23 @@ pre.body { white-space: pre-wrap; background: var(--panel-2); padding: 14px; bor
 
 .foot { text-align: center; color: var(--muted); font-size: 13px; padding: 24px; border-top: 1px solid var(--border); }
 
+/* Tabs */
+.tab-bar { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin: 8px 0 4px; }
+.tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: 10px 14px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.tab:hover { color: var(--ink); }
+.tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Variant cards */
+.variant-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.variant { margin: 0; }
+.variant.chosen { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+.variant-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.creative-media { width: 100%; border-radius: 8px; margin: 8px 0; border: 1px solid var(--border); }
+.small { font-size: 12px; }
+
 @media (max-width: 720px) {
   .stats, .two-col { grid-template-columns: 1fr 1fr; }
+  .variant-grid { grid-template-columns: 1fr; }
 }

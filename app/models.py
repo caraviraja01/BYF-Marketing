@@ -45,6 +45,8 @@ class PipelineRun(Base):
     research: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     strategy: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Non-fatal notes, e.g. an agent that fell back to a draft when live gen failed.
+    warnings: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     items: Mapped[list["ContentItem"]] = relationship(
         back_populates="run", cascade="all, delete-orphan"
@@ -64,8 +66,11 @@ class ContentItem(Base):
     status: Mapped[ItemStatus] = mapped_column(Enum(ItemStatus), default=ItemStatus.DRAFT)
 
     idea: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    script: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    creative: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    # Variant lists (each a list of Script / CreativeAsset dicts) + the chosen index.
+    scripts: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
+    selected_script: Mapped[int] = mapped_column(Integer, default=0)
+    creatives: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
+    selected_creative: Mapped[int] = mapped_column(Integer, default=0)
     verification: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     analytics: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
@@ -74,3 +79,18 @@ class ContentItem(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+    # Convenience accessors for the currently-selected variant.
+    @property
+    def script(self) -> dict[str, Any] | None:
+        items = self.scripts or []
+        if 0 <= self.selected_script < len(items):
+            return items[self.selected_script]
+        return items[0] if items else None
+
+    @property
+    def creative(self) -> dict[str, Any] | None:
+        items = self.creatives or []
+        if 0 <= self.selected_creative < len(items):
+            return items[self.selected_creative]
+        return items[0] if items else None

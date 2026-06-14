@@ -72,6 +72,7 @@ class ContentStrategy(BaseModel):
 
 
 class Script(BaseModel):
+    angle: str = Field(default="", description="Short label for this variant's angle/approach")
     platform: str
     format: str
     hook: str
@@ -82,18 +83,34 @@ class Script(BaseModel):
     estimated_duration_sec: int | None = None
 
 
+class ScriptSet(BaseModel):
+    """Multiple script variants for one content idea — the human picks one."""
+
+    variants: list[Script] = Field(description="Distinct script options (aim for 3)")
+
+
 # ── 4. Creative ───────────────────────────────────────────────────────────────
 
 
 class CreativeAsset(BaseModel):
-    type: str = Field(description="image | carousel | video_brief | brief")
-    status: str = Field(description="generated | brief_only | failed")
+    concept: str = Field(default="", description="Short label for this variant's visual concept")
+    type: str = Field(description="image | carousel | video | brief")
+    status: str = Field(description="generated | generating | brief_only | failed")
+    provider: str = Field(default="", description="canva | higgsfield | none")
     title: str
     asset_url: str | None = None
     thumbnail_url: str | None = None
     canva_design_id: str | None = None
+    higgsfield_request_id: str | None = None
     brief: str = Field(description="Creative brief / spec used or for a designer")
     slides: list[str] = Field(default_factory=list, description="Per-slide copy for carousels")
+    error: str | None = None
+
+
+class CreativeSet(BaseModel):
+    """Multiple creative concepts for one content idea — the human picks one."""
+
+    variants: list[CreativeAsset] = Field(description="Distinct creative options (aim for 3)")
 
 
 # ── 5. Verification ───────────────────────────────────────────────────────────

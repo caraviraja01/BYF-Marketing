@@ -4,67 +4,123 @@
 {% block head %}{% if in_progress %}<meta http-equiv="refresh" content="6" />{% endif %}{% endblock %}
 {% block content %}
 
-{% if in_progress %}
-<div class="card highlight">
-  <strong>⏳ Pipeline running…</strong> currently <em>{{ run.status.value.replace('_',' ') }}</em>.
-  This can take a few minutes with live Claude — the page refreshes automatically.
-</div>
-{% endif %}
-
 <p><a href="/" class="muted">← Dashboard</a></p>
 <div class="hero">
   <div>
     <h1>Cycle #{{ run.id }}</h1>
-    <p class="muted">{{ run.topic or '(agent-chosen topic)' }} · <span class="status {{ run.status.value }}">{{ run.status.value.replace('_',' ') }}</span></p>
+    <p class="muted">{{ run.topic or '(agent-chosen topic)' }} ·
+      <span class="status {{ run.status.value }}">{{ run.status.value.replace('_',' ') }}</span></p>
   </div>
+  {% if not in_progress %}
   <form method="post" action="/runs/{{ run.id }}/analytics">
     <button class="btn" type="submit">📊 Collect analytics</button>
   </form>
+  {% endif %}
 </div>
 
+{% if in_progress %}
+<div class="card highlight">
+  <strong>⏳ Pipeline running…</strong> currently <em>{{ run.status.value.replace('_',' ') }}</em>.
+  Live Claude can take a few minutes — this page refreshes automatically.
+</div>
+{% endif %}
+
 {% if run.error %}<div class="card error"><strong>Failed:</strong> {{ run.error }}</div>{% endif %}
+{% if run.warnings %}
+<div class="card warn">
+  <strong>⚠️ Notes from this run:</strong>
+  <ul>{% for w in run.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
 
-{% if run.research %}
-<section class="card">
-  <h2>1 · Research brief</h2>
-  <p>{{ run.research.summary }}</p>
-  <p class="muted"><strong>Recommended focus:</strong> {{ run.research.recommended_focus }}</p>
-  <details>
-    <summary>Trending topics & competitor insights</summary>
-    <ul>
-      {% for t in run.research.trending_topics %}
-        <li><strong>{{ t.title }}</strong> ({{ t.relevance_score }}/10) — {{ t.angle }}</li>
+<div class="tabs">
+  <nav class="tab-bar">
+    <button class="tab" data-target="research">🔎 Research</button>
+    <button class="tab" data-target="strategy">🧭 Strategy &amp; Calendar</button>
+    <button class="tab" data-target="content">📝 Content ({{ run.items|length }})</button>
+    <button class="tab" data-target="analytics">📊 Analytics</button>
+  </nav>
+
+  {# ── Research ───────────────────────────────────────────────────────── #}
+  <section class="tab-panel" id="research">
+    {% set r = run.research %}
+    {% if not r %}<p class="muted">No research yet.</p>{% else %}
+    <div class="card"><h2>Summary</h2><p>{{ r.summary }}</p>
+      <p class="muted"><strong>Recommended focus:</strong> {{ r.recommended_focus }}</p></div>
+
+    <div class="card"><h2>📈 Top trending topics</h2>
+      <table><thead><tr><th>Topic</th><th>Why now</th><th>BYF angle</th><th>Score</th></tr></thead><tbody>
+      {% for t in r.trending_topics %}
+        <tr><td><strong>{{ t.title }}</strong></td><td>{{ t.why_now }}</td><td>{{ t.angle }}</td>
+            <td><span class="chip">{{ t.relevance_score }}/10</span></td></tr>
       {% endfor %}
-    </ul>
-  </details>
-</section>
-{% endif %}
+      </tbody></table>
+    </div>
 
-{% if run.strategy %}
-<section class="card">
-  <h2>2 · Strategy</h2>
-  <p>{{ run.strategy.rationale }}</p>
-  <p class="muted">{{ run.strategy.posting_notes }}</p>
-</section>
-{% endif %}
+    <div class="card"><h2>🏷️ What competitors are posting</h2>
+      {% if not r.competitor_insights %}<p class="muted">None captured.</p>{% else %}
+      <table><thead><tr><th>Competitor</th><th>What they did</th><th>Signal</th><th>Our takeaway</th></tr></thead><tbody>
+      {% for c in r.competitor_insights %}
+        <tr><td><strong>{{ c.competitor }}</strong></td><td>{{ c.what_they_did }}</td>
+            <td>{{ c.performance_signal }}</td><td>{{ c.takeaway }}</td></tr>
+      {% endfor %}
+      </tbody></table>{% endif %}
+    </div>
 
-<section class="card">
-  <h2>Content items</h2>
-  <table>
-    <thead><tr><th>Title</th><th>Platform</th><th>Format</th><th>Status</th><th>Score</th><th></th></tr></thead>
-    <tbody>
-    {% for item in run.items %}
-      <tr>
-        <td>{{ item.title }}</td>
-        <td><span class="chip">{{ item.platform }}</span></td>
-        <td>{{ (item.idea or {}).get('format', '') }}</td>
-        <td><span class="status {{ item.status.value }}">{{ item.status.value.replace('_',' ') }}</span></td>
-        <td>{{ (item.verification or {}).get('score', '—') }}</td>
-        <td><a class="btn" href="/items/{{ item.id }}">Open →</a></td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</section>
+    <div class="card"><h2>🕳️ Content gaps identified</h2>
+      <ul>{% for g in r.content_gaps %}<li>{{ g }}</li>{% endfor %}</ul></div>
+    {% endif %}
+  </section>
+
+  {# ── Strategy + calendar ────────────────────────────────────────────── #}
+  <section class="tab-panel" id="strategy">
+    {% set s = run.strategy %}
+    {% if not s %}<p class="muted">No strategy yet.</p>{% else %}
+    <div class="card"><h2>Strategy rationale</h2><p>{{ s.rationale }}</p>
+      <p class="muted">{{ s.posting_notes }}</p></div>
+
+    <div class="card"><h2>🗓️ Content plan — next 7 days</h2>
+      <table><thead><tr><th>Day</th><th>Platform</th><th>Pillar</th><th>Format</th><th>Title</th><th>Stage</th></tr></thead><tbody>
+      {% for e in s.calendar_7_day %}
+        <tr><td><strong>{{ e.day }}</strong></td><td><span class="chip">{{ e.platform }}</span></td>
+            <td>{{ e.pillar }}</td><td>{{ e.format }}</td><td>{{ e.title }}</td>
+            <td><span class="chip">{{ e.funnel_stage }}</span></td></tr>
+      {% endfor %}
+      </tbody></table>
+    </div>
+
+    {% if s.monthly_themes %}
+    <div class="card"><h2>📅 30-day themes</h2>
+      <ol>{% for m in s.monthly_themes %}<li>{{ m }}</li>{% endfor %}</ol></div>
+    {% endif %}
+    {% endif %}
+  </section>
+
+  {# ── Content items ──────────────────────────────────────────────────── #}
+  <section class="tab-panel" id="content">
+    <div class="card">
+      <p class="muted">Each item has 3 script options and 3 creative concepts — open it to choose, verify and post.</p>
+      <table><thead><tr><th>Title</th><th>Platform</th><th>Format</th><th>Status</th><th>Score</th><th></th></tr></thead><tbody>
+      {% for item in run.items %}
+        <tr><td>{{ item.title }}</td><td><span class="chip">{{ item.platform }}</span></td>
+            <td>{{ (item.idea or {}).get('format', '') }}</td>
+            <td><span class="status {{ item.status.value }}">{{ item.status.value.replace('_',' ') }}</span></td>
+            <td>{{ (item.verification or {}).get('score', '—') }}</td>
+            <td><a class="btn" href="/items/{{ item.id }}">Open →</a></td></tr>
+      {% endfor %}
+      </tbody></table>
+    </div>
+  </section>
+
+  {# ── Analytics ──────────────────────────────────────────────────────── #}
+  <section class="tab-panel" id="analytics">
+    <div class="card">
+      <p>Publish items, then collect analytics to see traction and improvement ideas.</p>
+      <form method="post" action="/runs/{{ run.id }}/analytics">
+        <button class="btn primary" type="submit">📊 Collect analytics for published items</button>
+      </form>
+    </div>
+  </section>
+</div>
 
 {% endblock %}

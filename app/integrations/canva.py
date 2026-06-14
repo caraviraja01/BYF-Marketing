@@ -25,8 +25,10 @@ class CanvaConnector:
         return bool(self._settings.canva_api_key and self._settings.canva_brand_template_id)
 
     def produce(self, asset: CreativeAsset) -> CreativeAsset:
+        asset.provider = "canva"
         if not self.enabled:
             asset.status = "brief_only"
+            asset.error = "Canva not configured (set CANVA_API_KEY + CANVA_BRAND_TEMPLATE_ID)."
             return asset
         return self._generate_live(asset)
 

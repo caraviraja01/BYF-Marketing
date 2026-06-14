@@ -34,14 +34,19 @@ def _db():
 
 
 def test_agents_run_in_mock_mode():
-    brief = ResearchAgent().run(topic="emergency funds")
+    brief = ResearchAgent().run(topic="cash flow forecasting")
     assert brief.trending_topics
     strategy = StrategyAgent().run(research=brief)
     assert len(strategy.ideas) >= 1
+    assert len(strategy.calendar_7_day) >= 1  # 7-day plan present
     idea = strategy.ideas[0]
-    script = ScriptAgent().run(idea=idea)
+    script_set = ScriptAgent().run(idea=idea)
+    assert len(script_set.variants) == 3  # three script options
+    script = script_set.variants[0]
     assert script.hook and script.body
-    creative = CreativeAgent().run(script=script)
+    creative_set = CreativeAgent().run(script=script)
+    assert len(creative_set.variants) == 3  # three creative concepts
+    creative = creative_set.variants[0]
     assert creative.status in {"brief_only", "generated"}
     verification = VerificationAgent().run(script=script, creative=creative.model_dump())
     assert verification.compliance_ok is True

@@ -151,6 +151,24 @@ def item_detail(item_id: int, request: Request, session: Session = Depends(get_s
     return templates.TemplateResponse("item.html", _ctx(request, item=item))
 
 
+@app.post("/items/{item_id}/select-script")
+def select_script(item_id: int, index: int = Form(...)):
+    orchestrator.select_script(item_id, index)
+    return RedirectResponse(url=f"/items/{item_id}#script", status_code=303)
+
+
+@app.post("/items/{item_id}/select-creative")
+def select_creative(item_id: int, index: int = Form(...)):
+    orchestrator.select_creative(item_id, index)
+    return RedirectResponse(url=f"/items/{item_id}#creative", status_code=303)
+
+
+@app.post("/items/{item_id}/generate-creative")
+def generate_creative(item_id: int):
+    orchestrator.realize_creative(item_id)
+    return RedirectResponse(url=f"/items/{item_id}#creative", status_code=303)
+
+
 @app.post("/items/{item_id}/approve")
 def approve_item(item_id: int, note: str = Form(default="")):
     orchestrator.approve(item_id, note.strip() or None)
