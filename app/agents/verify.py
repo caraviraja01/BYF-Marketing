@@ -97,7 +97,16 @@ class VerificationAgent(BaseAgent[VerificationResult]):
         **_: Any,
     ) -> VerificationResult:
         data = script.model_dump() if isinstance(script, Script) else script
-        has_disclaimer = "not financial advice" in self._compliance_text(data)
+        text = self._compliance_text(data)
+        has_disclaimer = any(
+            marker in text
+            for marker in (
+                "informational purposes",
+                "consult a qualified professional",
+                "not financial advice",
+                "does not constitute",
+            )
+        )
         issues: list[VerificationIssue] = []
         if not has_disclaimer:
             issues.append(

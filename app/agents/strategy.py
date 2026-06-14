@@ -50,60 +50,61 @@ class StrategyAgent(BaseAgent[ContentStrategy]):
 
     def mock(self, *, research: dict[str, Any] | ResearchBrief, **_: Any) -> ContentStrategy:
         brief = research if isinstance(research, dict) else research.model_dump()
-        focus = brief.get("recommended_focus", "Tax-saving options, explained simply")
+        focus = brief.get("recommended_focus", "Getting startup finances investor-ready")
         topic = (brief.get("trending_topics") or [{}])[0].get(
-            "title", "Tax-saving investment options"
+            "title", "Getting your startup finances investor-ready"
         )
         return ContentStrategy(
             rationale=(
                 f"Anchor the cycle on the recommended focus — {focus} — and repurpose the "
-                "core idea natively per channel to maximise reach without extra research."
+                "core idea natively per channel. Lead on LinkedIn (where founders and "
+                "decision-makers are) and support with educational social formats."
             ),
             ideas=[
                 ContentIdea(
-                    title=f"{topic}: which one is right for you?",
-                    pillar="tax_smart",
-                    platform="instagram",
-                    format="carousel",
-                    funnel_stage="consideration",
-                    hook="Stop guessing which tax-saver to pick. Here's the 30-second filter.",
-                    key_message="Match the instrument to your goal, horizon and risk — not the hype.",
-                    cta="Save this for tax season.",
-                ),
-                ContentIdea(
-                    title=f"The honest take on {topic.lower()}",
-                    pillar="myth_busting",
+                    title=f"{topic}: a CFO's pre-raise checklist",
+                    pillar="startup_finance",
                     platform="linkedin",
                     format="insight post",
-                    funnel_stage="awareness",
-                    hook="Most 'tax-saving' advice optimises for the wrong thing.",
-                    key_message="Tax efficiency should serve your financial goals, not replace them.",
-                    cta="Follow for jargon-free money thinking.",
+                    funnel_stage="consideration",
+                    hook="Investors don't reject decks — they reject messy financials. Here's the fix.",
+                    key_message="The documents and metrics every founder needs ready before a raise.",
+                    cta="Schedule a CFO Strategy Call.",
                 ),
                 ContentIdea(
-                    title=f"{topic} in 60 seconds",
-                    pillar="tax_smart",
+                    title="The 13-week cash flow framework founders track too late",
+                    pillar="virtual_cfo",
+                    platform="instagram",
+                    format="carousel",
+                    funnel_stage="awareness",
+                    hook="Profit ≠ cash. The metric that actually keeps you alive 👇",
+                    key_message="A simple rolling cash flow view that prevents nasty surprises.",
+                    cta="Download the Startup Finance Checklist.",
+                ),
+                ContentIdea(
+                    title="Investor-ready financials in 60 seconds",
+                    pillar="startup_finance",
                     platform="youtube",
                     format="short",
                     funnel_stage="awareness",
-                    hook="Three tax-savers, one simple way to choose.",
-                    key_message="A quick decision framework anyone can apply today.",
-                    cta="Full explainer on the channel.",
+                    hook="What investors check first in your financials.",
+                    key_message="A quick walkthrough of the must-haves before due diligence.",
+                    cta="Full fundraising explainer on the channel.",
                 ),
                 ContentIdea(
-                    title=f"Thread: {topic} myths that cost you money",
-                    pillar="myth_busting",
+                    title="Thread: GST & TDS mistakes that cost growing businesses",
+                    pillar="taxation",
                     platform="twitter",
                     format="thread",
                     funnel_stage="awareness",
-                    hook="5 tax-saving myths that quietly drain your wealth 🧵",
-                    key_message="Bust the myths, give the honest framework.",
-                    cta="Repost if this cleared things up.",
+                    hook="5 compliance slip-ups quietly draining growing businesses 🧵",
+                    key_message="Common, avoidable errors — and the practical fix for each.",
+                    cta="Connect with Our Finance Experts.",
                 ),
             ],
             posting_notes=(
-                "Publish the Instagram carousel first as the flagship asset, then repurpose "
-                "into the YouTube Short and X thread within 48h while the topic is warm. "
-                "LinkedIn post goes out mid-week morning for B2B reach."
+                "Lead with the LinkedIn insight post mid-week morning for founder/B2B reach, "
+                "then repurpose into the Instagram carousel and YouTube Short within 48h "
+                "while the topic is warm. Run the X thread to capture taxation-update search interest."
             ),
         )

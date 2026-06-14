@@ -46,33 +46,34 @@ class ScriptAgent(BaseAgent[Script]):
         data = idea.model_dump() if isinstance(idea, ContentIdea) else idea
         platform = data.get("platform", "instagram")
         fmt = data.get("format", "carousel")
-        disclaimer = self.brand.compliance.get("required_disclaimer", "").strip()
+        disclaimer = self.brand.compliance.get("required_disclaimer", "").strip().strip('"')
         body = (
-            f"{data.get('hook', 'Here is the simple way to decide.')}\n\n"
-            "1) Start with your goal and time horizon — not the product.\n"
-            "2) Match risk to that horizon: shorter = safer, longer = more growth-oriented.\n"
-            "3) Only then compare options on cost, lock-in and tax treatment.\n\n"
-            f"{data.get('key_message', 'Pick the tool that fits your plan, not the hype.')}\n\n"
+            f"{data.get('hook', 'Here is what investors actually check first.')}\n\n"
+            "1) Clean, reconciled books — no surprises in due diligence.\n"
+            "2) A clear cash flow view: runway, burn and a 13-week forecast.\n"
+            "3) Unit economics and a defensible financial model behind the ask.\n"
+            "4) Compliance in order — GST, TDS and MCA filings up to date.\n\n"
+            f"{data.get('key_message', 'Get your numbers boardroom-ready before you pitch.')}\n\n"
             f"{disclaimer}"
         )
         return Script(
             platform=platform,
             format=fmt,
-            hook=data.get("hook", "Stop guessing — here's the 30-second filter."),
+            hook=data.get("hook", "Investors don't reject decks — they reject messy financials."),
             body=body,
-            cta=data.get("cta", "Save this for later."),
+            cta=data.get("cta", "Schedule a CFO Strategy Call."),
             hashtags=[
-                "#personalfinance",
-                "#moneytips",
-                "#investing",
-                "#financialfreedom",
+                "#startupfinance",
+                "#virtualcfo",
+                "#fundraising",
+                "#cashflow",
+                "#founders",
+                "#taxation",
                 "#beyondyourfinance",
-                "#taxsaving",
-                "#moneymindset",
             ],
             visual_direction=(
-                "Clean, calm brand palette. Bold headline per slide, one idea each, "
-                "large readable type, a simple icon or mini-chart to anchor each point. "
+                "Clean, professional brand palette. Bold headline per slide, one idea each, "
+                "large readable type, a simple icon or mini-chart/KPI to anchor each point. "
                 "Final slide: CTA + disclaimer in small but legible text."
             ),
             estimated_duration_sec=45 if fmt in {"reel", "short", "video"} else None,

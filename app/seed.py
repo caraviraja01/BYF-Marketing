@@ -11,7 +11,7 @@ from .orchestrator import Orchestrator
 def main() -> None:
     init_db()
     orch = Orchestrator()
-    run_id = orch.run_cycle(topic="ELSS vs PPF: which tax-saver fits you?")
+    run_id = orch.run_cycle(topic="Getting your startup finances investor-ready before a raise")
     print(f"Seeded demo cycle #{run_id}. Start the app with:  uvicorn app.main:app --reload")
 
 

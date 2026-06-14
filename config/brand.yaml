@@ -6,122 +6,224 @@
 
 name: Beyond Your Finance
 short_name: BYF
-tagline: "Money confidence, beyond the jargon."
+tagline: "Beyond Your In-House Finance Team"
 
 # What you do, in one honest paragraph. Agents use this to stay on-message.
 mission: >
-  Beyond Your Finance helps everyday people take control of their money —
-  budgeting, saving, investing, and long-term wealth building — through clear,
-  jargon-free education. We are an educational brand, not a registered investment
-  adviser, and we never give individualised investment advice.
+  Beyond Your Finance helps startups, SMEs, founders, and growing businesses
+  strengthen their financial operations through Virtual CFO services,
+  taxation, accounting, compliance management, fundraising support,
+  ESG reporting, and finance automation. We simplify complex financial
+  challenges and help businesses make informed decisions that drive
+  sustainable growth.
 
 # Who we're talking to. Be specific — vague audiences produce vague content.
 audience:
   primary:
-    label: "Aspiring wealth-builders (25–40)"
+    label: "Startup Founders & Growth-Stage Businesses"
     description: >
-      Early-to-mid career professionals who earn well but feel they "should be
-      doing more" with their money. Curious, time-poor, slightly intimidated by
-      finance. Want practical steps, not lectures.
+      Founders, startup leadership teams, and growth-stage businesses looking
+      for strategic financial guidance, fundraising support, investor readiness,
+      and scalable finance operations without hiring a full-time CFO.
     pain_points:
-      - "Don't know where to start with investing"
-      - "Confused by jargon and conflicting advice online"
-      - "Lifestyle creep — earning more but not saving more"
-      - "Fear of making an expensive mistake"
+      - "Limited financial visibility and reporting"
+      - "Difficulty preparing for fundraising"
+      - "Cash flow uncertainty"
+      - "Lack of finance processes and controls"
+      - "Compliance and taxation complexity"
     goals:
-      - "Build an emergency fund and clear debt"
-      - "Start investing with confidence"
-      - "Understand tax-efficient saving"
-      - "Feel in control of their financial future"
+      - "Raise capital successfully"
+      - "Build investor confidence"
+      - "Improve financial planning and forecasting"
+      - "Create scalable finance operations"
+      - "Improve profitability and cash flow"
   secondary:
-    label: "Recent grads / first jobbers (21–26)"
-    description: "Just started earning, forming their first money habits."
+    label: "SMEs & Business Owners"
+    description: >
+      Established businesses seeking strategic financial leadership,
+      taxation support, compliance management, and operational efficiency.
+    pain_points:
+      - "Poor MIS and financial reporting"
+      - "Working capital challenges"
+      - "Compliance burden"
+      - "Lack of strategic finance support"
+      - "Manual and inefficient finance processes"
+    goals:
+      - "Increase profitability"
+      - "Improve cash flow management"
+      - "Stay compliant"
+      - "Scale efficiently"
+      - "Automate finance operations"
+  tertiary:
+    label: "Listed Companies & Large Enterprises"
+    description: >
+      Organizations requiring ESG reporting, BRSR compliance, sustainability
+      disclosures, carbon accounting, and governance support.
+    pain_points:
+      - "Complex ESG reporting requirements"
+      - "BRSR compliance challenges"
+      - "Data collection and reporting gaps"
+      - "Stakeholder reporting expectations"
+    goals:
+      - "Meet regulatory requirements"
+      - "Improve ESG performance"
+      - "Strengthen sustainability reporting"
+      - "Enhance stakeholder confidence"
 
 # Brand voice. Agents are told to match this exactly.
 voice:
-  personality: ["warm", "credible", "plain-spoken", "encouraging", "no-hype"]
+  personality: ["warm", "credible", "strategic", "professional", "solution-oriented", "no-hype"]
   we_sound_like: >
-    A sharp, friendly mentor who's been through it — explains the 'why', uses
-    real numbers and analogies, never condescends, never sells fear.
+    A trusted CFO and business advisor who explains complex financial matters
+    clearly, focuses on practical outcomes, and helps businesses make better
+    decisions with confidence.
   we_never_sound_like: >
-    A pushy salesperson, a hype-merchant promising riches, or a textbook.
+    A generic CA firm, a pushy salesperson, a compliance-only advisor,
+    or a finance influencer chasing trends.
   do:
-    - "Lead with a relatable problem or a surprising number"
-    - "Use concrete examples and simple analogies"
-    - "Give one clear, actionable takeaway per post"
-    - "Be honest about risk and trade-offs"
+    - "Lead with business challenges and practical solutions"
+    - "Use real-world examples and financial insights"
+    - "Explain complex regulations in simple language"
+    - "Focus on measurable business outcomes"
+    - "Provide actionable recommendations"
   dont:
-    - "Promise or imply guaranteed returns"
-    - "Use fear-based or get-rich-quick framing"
-    - "Give personalised 'you should buy X' advice"
-    - "Bury the point under jargon"
-  reading_level: "Grade 7–8 (clear and accessible)"
+    - "Promise guaranteed business outcomes"
+    - "Use fear-based marketing"
+    - "Overcomplicate financial concepts"
+    - "Make unrealistic growth claims"
+    - "Use unnecessary jargon"
+  reading_level: "Professional yet easy to understand"
 
 # Content pillars — the recurring themes we own. The Strategy agent maps ideas to these.
 content_pillars:
-  - id: foundations
-    name: "Money Foundations"
-    description: "Budgeting, emergency funds, debt — the basics done right."
-  - id: investing
-    name: "Investing Demystified"
-    description: "How markets, funds, and compounding actually work."
-  - id: tax_smart
-    name: "Tax-Smart Money"
-    description: "Legal, practical ways to keep more of what you earn."
-  - id: mindset
-    name: "Money Mindset"
-    description: "Behaviour, habits, and psychology of wealth."
-  - id: myth_busting
-    name: "Myth Busting"
-    description: "Debunking bad finance advice that spreads online."
+  - id: startup_finance
+    name: "Startup Finance & Fundraising"
+    description: >
+      Fundraising readiness, financial modelling, due diligence,
+      investor reporting, cap table management, and startup finance strategy.
+  - id: virtual_cfo
+    name: "Virtual CFO Insights"
+    description: >
+      Cash flow management, profitability improvement, budgeting,
+      forecasting, KPIs, and strategic financial leadership.
+  - id: taxation
+    name: "Taxation & Compliance"
+    description: >
+      GST, Income Tax, TDS, MCA compliance, regulatory updates,
+      tax planning, and compliance best practices.
+  - id: automation
+    name: "Finance Automation & Process Improvement"
+    description: >
+      Finance transformation, AI-powered reporting, MIS dashboards,
+      workflow automation, SOPs, and internal controls.
+  - id: esg
+    name: "ESG & Sustainability Reporting"
+    description: >
+      BRSR, BRSR Core, ESG reporting, carbon accounting,
+      sustainability disclosures, and regulatory compliance.
+  - id: founder_mistakes
+    name: "Founder Finance Mistakes"
+    description: >
+      Common mistakes related to fundraising, cash flow,
+      compliance, taxation, profitability, and scaling.
 
 # Competitors / accounts to benchmark against (the Research agent studies these).
 competitors:
-  - name: "(add a competitor handle/name)"
-    platforms: ["instagram", "youtube"]
-    note: "What they do well / where they're weak"
+  - name: "CFO Bridge"
+    platforms: ["linkedin", "website"]
+    note: "Virtual CFO and startup finance positioning"
+  - name: "The CFO Centre"
+    platforms: ["linkedin", "website"]
+    note: "Fractional CFO services and thought leadership"
+  - name: "Fincent"
+    platforms: ["linkedin", "website"]
+    note: "Startup accounting and CFO services"
+  - name: "Vakilsearch"
+    platforms: ["linkedin", "instagram", "youtube"]
+    note: "Strong compliance and business registration content"
 
 # Channels we publish to and what each is for.
 channels:
   linkedin:
     enabled: true
-    focus: "Thought leadership, B2B credibility, long-form insight"
-    cadence_per_week: 3
+    focus: "Thought leadership, startup finance, Virtual CFO insights, taxation, ESG and fundraising"
+    cadence_per_week: 4
   instagram:
     enabled: true
-    focus: "Reels + carousels — education that's saveable and shareable"
+    focus: "Educational carousels, reels, taxation tips, startup finance and founder education"
     cadence_per_week: 5
   youtube:
     enabled: true
-    focus: "Explainers (long-form) + Shorts"
+    focus: "Fundraising, GST, Income Tax, CFO strategies, ESG and business finance explainers"
     cadence_per_week: 2
   twitter:
     enabled: true
-    focus: "Threads, hot takes on finance news, trend hijacking"
-    cadence_per_week: 7
+    focus: "Business finance insights, taxation updates, startup ecosystem trends and quick educational threads"
+    cadence_per_week: 5
 
 # Always-on calls to action (rotate; never hard-sell).
 ctas:
-  - "Follow for jargon-free money tips."
-  - "Save this for when you need it."
-  - "Read our free starter guide (link in bio)."
+  - "Book a Free Consultation."
+  - "Schedule a CFO Strategy Call."
+  - "Connect with Our Finance Experts."
+  - "Download the Startup Finance Checklist."
+  - "Speak with Beyond Your Finance Today."
 
 # Hard compliance rules. The Verify agent enforces these. DO NOT WEAKEN lightly.
 compliance:
   jurisdiction_note: >
-    Educational content only. Set the correct regulator/jurisdiction for your
-    market (e.g. SEBI in India, FCA in the UK, SEC/FINRA in the US).
+    Information shared by Beyond Your Finance is for educational and
+    informational purposes only and should not be considered legal, tax,
+    accounting, investment, or financial advice. Professional advice should
+    be sought before acting on any information.
   required_disclaimer: >
-    "Educational content only — not financial advice. Investments carry risk,
-    including loss of capital. Do your own research or consult a licensed adviser."
+    "This content is for informational purposes only and does not constitute
+    legal, tax, accounting, investment, or financial advice. Please consult
+    a qualified professional before making business or financial decisions."
   banned_claims:
-    - "guaranteed returns"
-    - "risk-free investment"
-    - "you will double your money"
-    - "get rich quick"
-    - "can't lose"
-    - "sure-shot / multibagger guaranteed"
+    - "guaranteed funding"
+    - "100% tax savings"
+    - "assured business growth"
+    - "guaranteed results"
+    - "risk-free business growth"
+    - "instant compliance solution"
   must:
-    - "Include a disclaimer whenever specific instruments or returns are discussed"
-    - "Frame all outcomes as uncertain and risk-bearing"
-    - "Stay educational — never 'you should buy/sell X'"
+    - "Present information accurately and responsibly"
+    - "Avoid misleading financial claims"
+    - "Focus on education and informed decision making"
+    - "Maintain professional and ethical standards"
+    - "Use factual and verifiable information"
+
+# Core services offered by the firm.
+services:
+  - "Virtual CFO Services"
+  - "Financial Planning & Analysis"
+  - "Fundraising Support"
+  - "Financial Modelling"
+  - "Investor Reporting"
+  - "Accounting & Bookkeeping"
+  - "GST Advisory & Compliance"
+  - "Income Tax Advisory"
+  - "Business Registration Services"
+  - "Secretarial Compliance"
+  - "ESG & BRSR Reporting"
+  - "Carbon Accounting"
+  - "Finance Automation"
+  - "SOP & Internal Controls Development"
+
+# What makes us different.
+differentiators:
+  - "13+ years of finance leadership experience"
+  - "Startup and SME focused advisory"
+  - "Virtual CFO expertise"
+  - "Fundraising and investor readiness support"
+  - "Taxation and compliance specialists"
+  - "ESG and BRSR consulting capabilities"
+  - "AI-driven finance automation approach"
+  - "One-stop finance, tax, compliance and growth partner"
+
+brand_promise: >
+  Beyond Your Finance acts as an extension of your leadership team,
+  providing strategic financial expertise, compliance support,
+  fundraising readiness, and business insights that help organizations
+  grow with confidence.

@@ -43,27 +43,28 @@ class AnalyticsAgent(BaseAgent[AnalyticsInsight]):
         worst = min(metrics, key=lambda m: m.get("engagement_rate", 0), default={})
         return AnalyticsInsight(
             headline=(
-                "Educational decision-guide content drove the most saves; pure list "
-                "formats underperformed on depth signals."
+                "Founder-focused, outcome-led content drove the strongest qualified "
+                "engagement; generic compliance how-tos underperformed on depth."
             ),
             what_worked=[
-                f"Highest saves on {best.get('platform', 'instagram')} — decision-framework carousels resonate.",
-                "Honest, risk-aware framing earned thoughtful comments (high-quality engagement).",
+                f"Highest engagement on {best.get('platform', 'linkedin')} — CFO checklists and frameworks resonate with founders.",
+                "Practical, metric-led posts earned high-intent comments and consultation enquiries.",
             ],
             what_underperformed=[
                 f"{worst.get('platform', 'twitter')} reach was soft — hook likely too generic.",
                 "Long captions on short-form may be hurting completion.",
             ],
             recommendations=[
-                "Double down on 'which option for whom' decision guides as a repeatable format.",
+                "Double down on CFO checklists and decision frameworks as a repeatable LinkedIn format.",
+                "Lead more posts with a measurable business outcome or a real client scenario.",
                 "A/B test sharper, number-led first lines on X to lift reach.",
-                "Tighten short-form scripts to one idea; move detail to the carousel/long-form.",
-                "Add a consistent saveable summary slide to every carousel.",
+                "Add a consistent saveable summary slide + soft CTA to every carousel.",
             ],
             next_topic_suggestions=[
-                "Emergency fund sizing framework",
-                "Index vs active funds — honest trade-offs",
-                "First ₹/$1,000 to invest: a beginner sequence",
-                "Lifestyle creep: the 10-year compounding cost",
+                "13-week cash flow forecasting for founders",
+                "Due-diligence data room: what investors ask for",
+                "GST & TDS compliance calendar for SMEs",
+                "BRSR Core readiness for listed companies",
+                "When should a startup hire a Virtual CFO?",
             ],
         )

@@ -57,60 +57,61 @@ class ResearchAgent(BaseAgent[ResearchBrief]):
         return "\n".join(parts)
 
     def mock(self, *, topic: str | None = None, **_: Any) -> ResearchBrief:
-        anchor = topic or "Tax-saving investment options for salaried earners"
+        anchor = topic or "Getting your startup finances investor-ready before a raise"
         return ResearchBrief(
             summary=(
-                "Tax-planning season interest is rising and audiences are confused by "
-                f"jargon-heavy comparisons. '{anchor}' is a high-intent, evergreen "
-                "opportunity BYF can own with plain-English explainers."
+                "Founders are increasingly anxious about fundraising in a tighter capital "
+                f"market and confused by what 'investor-ready financials' actually means. "
+                f"'{anchor}' is a high-intent topic BYF can own with practical, CFO-grade "
+                "guidance that generic CA firms and influencers don't provide."
             ),
             trending_topics=[
                 TrendingTopic(
                     title=anchor,
-                    why_now="Recurring high-intent search spikes around tax deadlines.",
-                    angle="Plain-English 'which one, for whom' decision guide — no jargon.",
+                    why_now="Founders prepping for raises want a concrete due-diligence checklist.",
+                    angle="A CFO's pre-raise checklist: the numbers and documents investors demand.",
                     relevance_score=9,
                 ),
                 TrendingTopic(
-                    title="The real cost of lifestyle creep",
-                    why_now="Evergreen pain point; strong save/share behaviour.",
-                    angle="Show the 10-year compounding cost of small habit upgrades.",
+                    title="Cash flow runway: the metric founders track too late",
+                    why_now="Tighter funding makes runway and burn the board's #1 question.",
+                    angle="A simple 13-week cash flow framework any founder can run.",
                     relevance_score=8,
                 ),
                 TrendingTopic(
-                    title="Emergency fund: how much is actually enough?",
-                    why_now="Perennial beginner question, low competition for clear answers.",
-                    angle="A simple framework tied to job stability and dependents.",
+                    title="GST & TDS mistakes that quietly cost growing businesses",
+                    why_now="Recurring compliance pain; high search and save intent for SMEs.",
+                    angle="The 5 avoidable compliance slip-ups we see most, and how to fix them.",
+                    relevance_score=8,
+                ),
+                TrendingTopic(
+                    title="BRSR & ESG reporting: what listed companies must prepare now",
+                    why_now="Tightening BRSR Core requirements create urgent reporting demand.",
+                    angle="A plain-English readiness map for ESG disclosures and carbon accounting.",
                     relevance_score=7,
-                ),
-                TrendingTopic(
-                    title="Index funds vs active funds, explained simply",
-                    why_now="Ongoing debate; great myth-busting territory.",
-                    angle="Honest trade-offs with real numbers, no tribalism.",
-                    relevance_score=8,
                 ),
             ],
             competitor_insights=[
                 CompetitorInsight(
-                    competitor="Generic finance creators",
-                    what_they_did="Fast-cut reels listing instruments with on-screen text.",
-                    performance_signal="High reach but shallow saves; comments ask 'but which for me?'",
-                    takeaway="Win on decision-making clarity, not just listing options.",
+                    competitor="CFO Bridge / The CFO Centre",
+                    what_they_did="Authority LinkedIn posts on fractional-CFO value and case studies.",
+                    performance_signal="Strong B2B engagement on outcome-led, founder-story content.",
+                    takeaway="Lead with measurable business outcomes and real client scenarios.",
                 ),
                 CompetitorInsight(
-                    competitor="Hype 'get-rich' accounts",
-                    what_they_did="Bold return claims and FOMO hooks.",
-                    performance_signal="Spiky reach, low trust, frequent backlash.",
-                    takeaway="Differentiate on honesty and risk transparency — our moat.",
+                    competitor="Vakilsearch",
+                    what_they_did="High-volume compliance/registration explainers across IG + YouTube.",
+                    performance_signal="Great reach but generic; thin on strategic CFO depth.",
+                    takeaway="Differentiate on strategic finance + fundraising, not just compliance how-tos.",
                 ),
             ],
             content_gaps=[
-                "Decision frameworks ('which option for which person') vs plain lists",
-                "Honest risk/trade-off content that still feels encouraging",
-                "Beginner-safe explainers that don't assume prior knowledge",
+                "Strategic CFO/fundraising depth vs generic compliance how-tos",
+                "Outcome-led founder stories with real financial metrics",
+                "Plain-English ESG/BRSR readiness content for Indian companies",
             ],
             recommended_focus=(
-                f"Own the '{anchor}' conversation with a jargon-free decision guide, "
-                "repurposed across all four channels."
+                f"Own the '{anchor}' conversation with a CFO-grade, practical guide, "
+                "repurposed across LinkedIn, Instagram, YouTube and X."
             ),
         )

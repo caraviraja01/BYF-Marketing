@@ -58,11 +58,13 @@ class CreativeAgent(BaseAgent[CreativeAsset]):
                 "final slide in small but legible type."
             ),
             slides=[
-                data.get("hook", "Stop guessing."),
-                "1) Start with your goal & time horizon.",
-                "2) Match risk to your horizon.",
-                "3) Then compare cost, lock-in & tax.",
-                f"{data.get('cta', 'Save this for later.')}\n\nEducational only — not financial advice.",
+                data.get("hook", "What investors check first."),
+                "1) Clean, reconciled books.",
+                "2) Cash flow: runway, burn & 13-week forecast.",
+                "3) Unit economics & a defensible model.",
+                "4) Compliance in order: GST, TDS, MCA.",
+                f"{data.get('cta', 'Schedule a CFO Strategy Call.')}"
+                "\n\nFor informational purposes only — not professional advice.",
             ]
             if is_carousel
             else [],

@@ -85,11 +85,11 @@ def test_compliance_blocks_banned_claims():
     """The deterministic scan must block a guaranteed-returns claim regardless of LLM."""
     agent = VerificationAgent()
     bad = Script(
-        platform="instagram",
-        format="reel",
-        hook="This investment offers guaranteed returns with no risk!",
-        body="You will double your money — it's a risk-free investment.",
-        cta="Buy now",
+        platform="linkedin",
+        format="insight post",
+        hook="We get startups guaranteed funding, every time!",
+        body="Work with us for assured business growth and guaranteed results.",
+        cta="Sign up now",
     )
     result = agent.run(script=bad, creative={})
     assert result.passed is False
