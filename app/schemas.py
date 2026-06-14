@@ -47,9 +47,24 @@ class ContentIdea(BaseModel):
     cta: str
 
 
+class CalendarEntry(BaseModel):
+    day: str = Field(description="e.g. 'Day 1' or 'Mon' — when to publish")
+    platform: str
+    pillar: str
+    format: str
+    title: str
+    funnel_stage: str
+
+
 class ContentStrategy(BaseModel):
     rationale: str
-    ideas: list[ContentIdea]
+    ideas: list[ContentIdea] = Field(description="Ideas that will be fully produced this cycle")
+    calendar_7_day: list[CalendarEntry] = Field(
+        default_factory=list, description="A concrete 7-day posting plan"
+    )
+    monthly_themes: list[str] = Field(
+        default_factory=list, description="Weekly themes for a 30-day view"
+    )
     posting_notes: str = ""
 
 
