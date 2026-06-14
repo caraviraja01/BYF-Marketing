@@ -1,0 +1,40 @@
+# Render deployment blueprint for the BYF marketing dashboard.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# How to deploy:
+#   1. Push this repo to GitHub (already done).
+#   2. In Render → New → Blueprint → connect this repo and pick this branch.
+#   3. Render reads this file and creates the web service.
+#   4. Set the ANTHROPIC_API_KEY secret when prompted (it is NOT stored here).
+#   5. Open the generated *.onrender.com URL.
+#
+# Note: the free plan has an ephemeral filesystem and spins down when idle, so
+# the SQLite data resets on restart — fine for testing. For persistence, attach
+# a Render Disk (paid) and point BYF_DB_URL at it, or move to Postgres.
+
+services:
+  - type: web
+    name: byf-marketing
+    runtime: python
+    plan: free
+    branch: claude/relaxed-einstein-wern1x
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # Secret — leave blank here; set the real value in the Render dashboard.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: BYF_MODEL
+        value: claude-opus-4-8
+      - key: BYF_FAST_MODEL
+        value: claude-haiku-4-5-20251001
+      - key: BYF_DB_URL
+        value: sqlite:////tmp/byf.db
+      - key: BYF_ENV
+        value: production
+      # Simulate publishing until real social credentials are added.
+      - key: BYF_SIMULATE_PUBLISH
+        value: "true"

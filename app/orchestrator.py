@@ -56,18 +56,28 @@ class Orchestrator:
         self.metrics_provider = self.metrics_provider or AnalyticsProvider()
 
     # ── Stages 1–5: research → strategy → produce → verify ─────────────────────
-    def run_cycle(self, *, topic: str | None = None, items_per_run: int = 4) -> int:
-        """Run the pipeline up to the human-review gate. Returns the run id."""
+    def create_run(self, *, topic: str | None = None) -> int:
+        """Create the run row immediately and return its id (for background execution)."""
         with session_scope() as session:
             run = PipelineRun(topic=topic, status=RunStatus.RESEARCHING)
             session.add(run)
             session.flush()
-            run_id = run.id
+            return run.id
 
+    def execute_run(self, run_id: int, *, items_per_run: int = 4, raise_on_error: bool = False) -> None:
+        """Run the heavy pipeline for an existing run, up to the human-review gate.
+
+        Safe to call from a background task: failures are recorded on the run
+        (status=FAILED, error set) rather than raised, unless ``raise_on_error``.
+        """
+        with session_scope() as session:
+            run = session.get(PipelineRun, run_id)
+            if run is None:
+                raise ValueError(f"Run {run_id} not found")
             try:
                 log.info("Run %s: research", run_id)
-                signals = self.web.fetch_signals(topic)
-                brief: ResearchBrief = self.research.run(topic=topic, web_signals=signals)
+                signals = self.web.fetch_signals(run.topic)
+                brief: ResearchBrief = self.research.run(topic=run.topic, web_signals=signals)
                 run.research = brief.model_dump()
                 run.status = RunStatus.STRATEGISING
 
@@ -84,12 +94,18 @@ class Orchestrator:
 
                 run.status = RunStatus.AWAITING_REVIEW
                 log.info("Run %s: awaiting human review", run_id)
-            except Exception as exc:  # surface failures, don't swallow
+            except Exception as exc:
                 log.exception("Run %s failed", run_id)
                 run.status = RunStatus.FAILED
                 run.error = str(exc)
-                raise
-            return run_id
+                if raise_on_error:
+                    raise
+
+    def run_cycle(self, *, topic: str | None = None, items_per_run: int = 4) -> int:
+        """Synchronous create + execute (used by the CLI and tests). Returns the run id."""
+        run_id = self.create_run(topic=topic)
+        self.execute_run(run_id, items_per_run=items_per_run, raise_on_error=True)
+        return run_id
 
     def _produce_item(self, session: Any, run_id: int, idea: ContentIdea) -> None:
         script: Script = self.script.run(idea=idea)

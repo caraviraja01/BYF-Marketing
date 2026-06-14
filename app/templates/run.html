@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Cycle #{{ run.id }} · BYF Marketing{% endblock %}
+{% set in_progress = run.status.value in ['researching', 'strategising', 'producing'] %}
+{% block head %}{% if in_progress %}<meta http-equiv="refresh" content="6" />{% endif %}{% endblock %}
 {% block content %}
+
+{% if in_progress %}
+<div class="card highlight">
+  <strong>⏳ Pipeline running…</strong> currently <em>{{ run.status.value.replace('_',' ') }}</em>.
+  This can take a few minutes with live Claude — the page refreshes automatically.
+</div>
+{% endif %}
 
 <p><a href="/" class="muted">← Dashboard</a></p>
 <div class="hero">

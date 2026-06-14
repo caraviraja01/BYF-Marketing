@@ -59,5 +59,12 @@ python -m app.cli run            # let the Research agent pick the topic
 Each connector implements a clean interface, so swapping the stub for a live API is a
 single-file change — no agent or pipeline code moves.
 
+## Deploy
+
+Host the dashboard on **Render** (a persistent Python service — not Netlify/Vercel,
+which can't run this). A `render.yaml` blueprint is included; full steps in
+[`docs/DEPLOY.md`](docs/DEPLOY.md). Running a cycle executes in a background task,
+so the multi-minute pipeline never times out the request.
+
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design and
 [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) for the financial-marketing guardrails.

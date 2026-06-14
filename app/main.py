@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Form, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -66,8 +66,11 @@ def dashboard(request: Request, session: Session = Depends(get_session)):
 
 
 @app.post("/runs")
-def start_run(topic: str = Form(default="")):
-    run_id = orchestrator.run_cycle(topic=topic.strip() or None)
+def start_run(background_tasks: BackgroundTasks, topic: str = Form(default="")):
+    # Create the run immediately, then run the (minutes-long) pipeline in the
+    # background so the request returns at once. The run page auto-refreshes.
+    run_id = orchestrator.create_run(topic=topic.strip() or None)
+    background_tasks.add_task(orchestrator.execute_run, run_id)
     return RedirectResponse(url=f"/runs/{run_id}", status_code=303)
 
 
