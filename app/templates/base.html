@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}BYF Marketing{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="logo">BYF</span>
+      <span>{{ brand.name }} · Marketing Automation</span>
+    </a>
+    <nav>
+      <a href="/">Dashboard</a>
+      {% if llm_enabled %}
+        <span class="badge live">● Live (Claude)</span>
+      {% else %}
+        <span class="badge mock" title="Set ANTHROPIC_API_KEY to enable real generation">● Mock mode</span>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="foot">
+    Educational content workflow · Human approval required before publishing.
+  </footer>
+</body>
+</html>

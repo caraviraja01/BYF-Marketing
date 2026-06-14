@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Cycle #{{ run.id }} · BYF Marketing{% endblock %}
+{% block content %}
+
+<p><a href="/" class="muted">← Dashboard</a></p>
+<div class="hero">
+  <div>
+    <h1>Cycle #{{ run.id }}</h1>
+    <p class="muted">{{ run.topic or '(agent-chosen topic)' }} · <span class="status {{ run.status.value }}">{{ run.status.value.replace('_',' ') }}</span></p>
+  </div>
+  <form method="post" action="/runs/{{ run.id }}/analytics">
+    <button class="btn" type="submit">📊 Collect analytics</button>
+  </form>
+</div>
+
+{% if run.error %}<div class="card error"><strong>Failed:</strong> {{ run.error }}</div>{% endif %}
+
+{% if run.research %}
+<section class="card">
+  <h2>1 · Research brief</h2>
+  <p>{{ run.research.summary }}</p>
+  <p class="muted"><strong>Recommended focus:</strong> {{ run.research.recommended_focus }}</p>
+  <details>
+    <summary>Trending topics & competitor insights</summary>
+    <ul>
+      {% for t in run.research.trending_topics %}
+        <li><strong>{{ t.title }}</strong> ({{ t.relevance_score }}/10) — {{ t.angle }}</li>
+      {% endfor %}
+    </ul>
+  </details>
+</section>
+{% endif %}
+
+{% if run.strategy %}
+<section class="card">
+  <h2>2 · Strategy</h2>
+  <p>{{ run.strategy.rationale }}</p>
+  <p class="muted">{{ run.strategy.posting_notes }}</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Content items</h2>
+  <table>
+    <thead><tr><th>Title</th><th>Platform</th><th>Format</th><th>Status</th><th>Score</th><th></th></tr></thead>
+    <tbody>
+    {% for item in run.items %}
+      <tr>
+        <td>{{ item.title }}</td>
+        <td><span class="chip">{{ item.platform }}</span></td>
+        <td>{{ (item.idea or {}).get('format', '') }}</td>
+        <td><span class="status {{ item.status.value }}">{{ item.status.value.replace('_',' ') }}</span></td>
+        <td>{{ (item.verification or {}).get('score', '—') }}</td>
+        <td><a class="btn" href="/items/{{ item.id }}">Open →</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% endblock %}

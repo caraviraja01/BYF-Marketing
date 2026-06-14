@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Analytics · Cycle #{{ run.id }}{% endblock %}
+{% block content %}
+
+<p><a href="/runs/{{ run.id }}" class="muted">← Cycle #{{ run.id }}</a></p>
+<h1>6 · Analytics & optimisation</h1>
+
+<section class="card highlight">
+  <h2>{{ insight.headline }}</h2>
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <h3>✅ What worked</h3>
+    <ul>{% for w in insight.what_worked %}<li>{{ w }}</li>{% endfor %}</ul>
+  </section>
+  <section class="card">
+    <h3>⚠️ What underperformed</h3>
+    <ul>{% for w in insight.what_underperformed %}<li>{{ w }}</li>{% endfor %}</ul>
+  </section>
+</div>
+
+<section class="card">
+  <h3>🎯 Recommendations for next cycle</h3>
+  <ol>{% for r in insight.recommendations %}<li>{{ r }}</li>{% endfor %}</ol>
+</section>
+
+<section class="card">
+  <h3>💡 Suggested next topics (feed these to a new cycle)</h3>
+  <ul class="topic-suggestions">
+    {% for t in insight.next_topic_suggestions %}
+      <li>
+        <form method="post" action="/runs" class="inline">
+          <input type="hidden" name="topic" value="{{ t }}" />
+          <button class="btn" type="submit">▶ {{ t }}</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% endblock %}

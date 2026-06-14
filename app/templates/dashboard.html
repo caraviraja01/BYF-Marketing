@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · BYF Marketing{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <div>
+    <h1>Marketing pipeline</h1>
+    <p class="muted">Research → Strategy → Script → Creative → Verify → <strong>your review</strong> → Publish → Analytics</p>
+  </div>
+  <form method="post" action="/runs" class="run-form">
+    <input type="text" name="topic" placeholder="Seed topic (optional) — e.g. ELSS vs PPF" />
+    <button type="submit" class="btn primary">▶ Run a new cycle</button>
+  </form>
+</section>
+
+<section class="stats">
+  <div class="stat"><span class="num">{{ pending|length }}</span><span class="lbl">Awaiting your review</span></div>
+  <div class="stat"><span class="num">{{ approved|length }}</span><span class="lbl">Approved · ready to publish</span></div>
+  <div class="stat"><span class="num">{{ published_count }}</span><span class="lbl">Published</span></div>
+  <div class="stat"><span class="num">{{ runs|length }}</span><span class="lbl">Total cycles</span></div>
+</section>
+
+{% if pending %}
+<section class="card">
+  <h2>🧑 Needs your review</h2>
+  <table>
+    <thead><tr><th>Title</th><th>Platform</th><th>Pillar</th><th>Score</th><th></th></tr></thead>
+    <tbody>
+    {% for item in pending %}
+      <tr>
+        <td>{{ item.title }}</td>
+        <td><span class="chip">{{ item.platform }}</span></td>
+        <td>{{ item.pillar }}</td>
+        <td>{{ (item.verification or {}).get('score', '—') }}</td>
+        <td><a class="btn" href="/items/{{ item.id }}">Review →</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Pipeline cycles</h2>
+  {% if not runs %}
+    <p class="muted">No cycles yet. Start one above — try it now, it works in mock mode without any API key.</p>
+  {% else %}
+  <table>
+    <thead><tr><th>#</th><th>Topic</th><th>Status</th><th>Items</th><th>When</th><th></th></tr></thead>
+    <tbody>
+    {% for run in runs %}
+      <tr>
+        <td>{{ run.id }}</td>
+        <td>{{ run.topic or '(agent-chosen)' }}</td>
+        <td><span class="status {{ run.status.value }}">{{ run.status.value.replace('_', ' ') }}</span></td>
+        <td>{{ run.items|length }}</td>
+        <td class="muted">{{ run.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td><a class="btn" href="/runs/{{ run.id }}">Open →</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+
+{% endblock %}

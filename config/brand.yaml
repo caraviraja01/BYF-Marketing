@@ -1,0 +1,127 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Beyond Your Finance — Brand Profile
+# This file is the single source of truth for every agent. Edit it to match your
+# real positioning; the better this is, the better every piece of content will be.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Beyond Your Finance
+short_name: BYF
+tagline: "Money confidence, beyond the jargon."
+
+# What you do, in one honest paragraph. Agents use this to stay on-message.
+mission: >
+  Beyond Your Finance helps everyday people take control of their money —
+  budgeting, saving, investing, and long-term wealth building — through clear,
+  jargon-free education. We are an educational brand, not a registered investment
+  adviser, and we never give individualised investment advice.
+
+# Who we're talking to. Be specific — vague audiences produce vague content.
+audience:
+  primary:
+    label: "Aspiring wealth-builders (25–40)"
+    description: >
+      Early-to-mid career professionals who earn well but feel they "should be
+      doing more" with their money. Curious, time-poor, slightly intimidated by
+      finance. Want practical steps, not lectures.
+    pain_points:
+      - "Don't know where to start with investing"
+      - "Confused by jargon and conflicting advice online"
+      - "Lifestyle creep — earning more but not saving more"
+      - "Fear of making an expensive mistake"
+    goals:
+      - "Build an emergency fund and clear debt"
+      - "Start investing with confidence"
+      - "Understand tax-efficient saving"
+      - "Feel in control of their financial future"
+  secondary:
+    label: "Recent grads / first jobbers (21–26)"
+    description: "Just started earning, forming their first money habits."
+
+# Brand voice. Agents are told to match this exactly.
+voice:
+  personality: ["warm", "credible", "plain-spoken", "encouraging", "no-hype"]
+  we_sound_like: >
+    A sharp, friendly mentor who's been through it — explains the 'why', uses
+    real numbers and analogies, never condescends, never sells fear.
+  we_never_sound_like: >
+    A pushy salesperson, a hype-merchant promising riches, or a textbook.
+  do:
+    - "Lead with a relatable problem or a surprising number"
+    - "Use concrete examples and simple analogies"
+    - "Give one clear, actionable takeaway per post"
+    - "Be honest about risk and trade-offs"
+  dont:
+    - "Promise or imply guaranteed returns"
+    - "Use fear-based or get-rich-quick framing"
+    - "Give personalised 'you should buy X' advice"
+    - "Bury the point under jargon"
+  reading_level: "Grade 7–8 (clear and accessible)"
+
+# Content pillars — the recurring themes we own. The Strategy agent maps ideas to these.
+content_pillars:
+  - id: foundations
+    name: "Money Foundations"
+    description: "Budgeting, emergency funds, debt — the basics done right."
+  - id: investing
+    name: "Investing Demystified"
+    description: "How markets, funds, and compounding actually work."
+  - id: tax_smart
+    name: "Tax-Smart Money"
+    description: "Legal, practical ways to keep more of what you earn."
+  - id: mindset
+    name: "Money Mindset"
+    description: "Behaviour, habits, and psychology of wealth."
+  - id: myth_busting
+    name: "Myth Busting"
+    description: "Debunking bad finance advice that spreads online."
+
+# Competitors / accounts to benchmark against (the Research agent studies these).
+competitors:
+  - name: "(add a competitor handle/name)"
+    platforms: ["instagram", "youtube"]
+    note: "What they do well / where they're weak"
+
+# Channels we publish to and what each is for.
+channels:
+  linkedin:
+    enabled: true
+    focus: "Thought leadership, B2B credibility, long-form insight"
+    cadence_per_week: 3
+  instagram:
+    enabled: true
+    focus: "Reels + carousels — education that's saveable and shareable"
+    cadence_per_week: 5
+  youtube:
+    enabled: true
+    focus: "Explainers (long-form) + Shorts"
+    cadence_per_week: 2
+  twitter:
+    enabled: true
+    focus: "Threads, hot takes on finance news, trend hijacking"
+    cadence_per_week: 7
+
+# Always-on calls to action (rotate; never hard-sell).
+ctas:
+  - "Follow for jargon-free money tips."
+  - "Save this for when you need it."
+  - "Read our free starter guide (link in bio)."
+
+# Hard compliance rules. The Verify agent enforces these. DO NOT WEAKEN lightly.
+compliance:
+  jurisdiction_note: >
+    Educational content only. Set the correct regulator/jurisdiction for your
+    market (e.g. SEBI in India, FCA in the UK, SEC/FINRA in the US).
+  required_disclaimer: >
+    "Educational content only — not financial advice. Investments carry risk,
+    including loss of capital. Do your own research or consult a licensed adviser."
+  banned_claims:
+    - "guaranteed returns"
+    - "risk-free investment"
+    - "you will double your money"
+    - "get rich quick"
+    - "can't lose"
+    - "sure-shot / multibagger guaranteed"
+  must:
+    - "Include a disclaimer whenever specific instruments or returns are discussed"
+    - "Frame all outcomes as uncertain and risk-bearing"
+    - "Stay educational — never 'you should buy/sell X'"

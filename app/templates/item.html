@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }} · BYF Marketing{% endblock %}
+{% block content %}
+
+<p><a href="/runs/{{ item.run_id }}" class="muted">← Cycle #{{ item.run_id }}</a></p>
+
+<div class="hero">
+  <div>
+    <h1>{{ item.title }}</h1>
+    <p class="muted">
+      <span class="chip">{{ item.platform }}</span>
+      <span class="chip">{{ (item.idea or {}).get('format','') }}</span>
+      <span class="status {{ item.status.value }}">{{ item.status.value.replace('_',' ') }}</span>
+    </p>
+  </div>
+</div>
+
+{% set v = item.verification or {} %}
+<section class="card {% if not v.get('passed') %}warn{% endif %}">
+  <h2>5 · Verification — score {{ v.get('score','—') }}/100
+    {% if v.get('compliance_ok') %}<span class="chip ok">compliance ✓</span>{% else %}<span class="chip bad">compliance ✗</span>{% endif %}
+  </h2>
+  <p>{{ v.get('summary','') }}</p>
+  {% if v.get('issues') %}
+  <ul class="issues">
+    {% for issue in v.get('issues') %}
+      <li class="sev-{{ issue.severity }}"><strong>[{{ issue.severity }} · {{ issue.category }}]</strong> {{ issue.detail }}<br><span class="muted">Fix: {{ issue.suggested_fix }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+{% set s = item.script or {} %}
+<section class="card">
+  <h2>3 · Script</h2>
+  <p><strong>Hook:</strong> {{ s.get('hook','') }}</p>
+  <pre class="body">{{ s.get('body','') }}</pre>
+  <p><strong>CTA:</strong> {{ s.get('cta','') }}</p>
+  <p class="muted">{{ s.get('hashtags', []) | join(' ') }}</p>
+</section>
+
+{% set c = item.creative or {} %}
+<section class="card">
+  <h2>4 · Creative <span class="chip">{{ c.get('type','') }}</span><span class="chip">{{ c.get('status','') }}</span></h2>
+  {% if c.get('asset_url') %}<p><a href="{{ c.get('asset_url') }}" target="_blank">View generated asset →</a></p>{% endif %}
+  <p>{{ c.get('brief','') }}</p>
+  {% if c.get('slides') %}
+  <ol class="slides">
+    {% for slide in c.get('slides') %}<li>{{ slide }}</li>{% endfor %}
+  </ol>
+  {% endif %}
+</section>
+
+{% if item.analytics %}
+<section class="card">
+  <h2>6 · Analytics</h2>
+  {% set a = item.analytics %}
+  <div class="metrics">
+    <span>👁 {{ a.impressions }}</span><span>❤ {{ a.likes }}</span><span>💬 {{ a.comments }}</span>
+    <span>🔁 {{ a.shares }}</span><span>🔖 {{ a.saves }}</span><span>📈 {{ a.engagement_rate }}%</span>
+  </div>
+</section>
+{% endif %}
+
+<section class="card actions">
+  <h2>🧑 Review & publish</h2>
+  {% if item.review_note %}<p class="muted">Your note: {{ item.review_note }}</p>{% endif %}
+  {% if item.status.value in ['pending_review', 'needs_revision'] %}
+    <form method="post" action="/items/{{ item.id }}/approve" class="inline">
+      <input type="text" name="note" placeholder="Optional note" />
+      <button class="btn primary" type="submit">✓ Approve</button>
+    </form>
+    <form method="post" action="/items/{{ item.id }}/reject" class="inline">
+      <button class="btn danger" type="submit">✗ Reject</button>
+    </form>
+  {% elif item.status.value == 'approved' %}
+    <form method="post" action="/items/{{ item.id }}/publish" class="inline">
+      <button class="btn primary" type="submit">🚀 Publish</button>
+    </form>
+    <p class="muted">Approved. Publishing uses the platform connector ({{ item.platform }}); without credentials it runs as a clearly-labelled simulation.</p>
+  {% elif item.status.value == 'published' %}
+    <p class="ok">✓ Published — ref: <code>{{ item.published_ref }}</code></p>
+  {% elif item.status.value == 'rejected' %}
+    <p class="muted">Rejected. Re-run the cycle to regenerate.</p>
+  {% endif %}
+</section>
+
+{% endblock %}
