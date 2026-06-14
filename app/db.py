@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .settings import get_settings
@@ -38,10 +38,43 @@ engine = _make_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
+def _autoheal_enum_columns() -> None:
+    """On Postgres, convert any legacy native-enum status columns to VARCHAR in place.
+
+    Older deploys created native ENUM types (itemstatus/runstatus); adding a new
+    status value (e.g. 'preparing') then fails. This idempotent migration relaxes the
+    columns to text so new statuses just work — no data loss, runs automatically.
+    """
+    if engine.dialect.name != "postgresql":
+        return
+    stmts = [
+        ("content_items", "status"),
+        ("pipeline_runs", "status"),
+    ]
+    with engine.begin() as conn:
+        for tbl, col in stmts:
+            conn.execute(text(f"""
+                DO $$ BEGIN
+                  IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='{tbl}' AND column_name='{col}'
+                      AND data_type='USER-DEFINED'
+                  ) THEN
+                    ALTER TABLE {tbl} ALTER COLUMN {col} TYPE varchar(32) USING {col}::text;
+                  END IF;
+                END $$;
+            """))
+
+
 def init_db() -> None:
     from . import models  # noqa: F401  (register models on Base)
 
     Base.metadata.create_all(engine)
+    try:
+        _autoheal_enum_columns()
+    except Exception:  # never block startup on the migration
+        import logging
+        logging.getLogger("byf.db").exception("enum auto-heal skipped")
 
 
 def reset_db() -> None:
