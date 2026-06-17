@@ -105,3 +105,117 @@ class ContentItem(Base):
         if 0 <= self.selected_creative < len(items):
             return items[self.selected_creative]
         return items[0] if items else None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# YourChartered.AI — public Q&A assistant + "Connect an Expert" live chat.
+# (Powered by Beyond Your Finance. Shares the same DB / Claude wrapper.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class UserRole(str, enum.Enum):
+    USER = "user"      # client / general public — asks the AI, can connect an expert
+    EXPERT = "expert"  # a CA / finance expert who answers live chats
+    ADMIN = "admin"    # firm owner — also sees the marketing dashboard
+
+
+class ChatStatus(str, enum.Enum):
+    WAITING = "waiting"  # requested by a user, no expert has joined yet
+    ACTIVE = "active"    # an expert has claimed it — live conversation
+    CLOSED = "closed"    # conversation ended
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    password_hash: Mapped[str] = mapped_column(String(255))
+    role: Mapped[UserRole] = mapped_column(_status_col(UserRole), default=UserRole.USER)
+    # Optional expert profile blurb shown to users in the chat header.
+    headline: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+    @property
+    def is_expert(self) -> bool:
+        return self.role in (UserRole.EXPERT, UserRole.ADMIN)
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == UserRole.ADMIN
+
+
+class AskConversation(Base):
+    """A single Q&A thread between a user and the AI assistant."""
+
+    __tablename__ = "ask_conversations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200), default="New question")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+    messages: Mapped[list["AskMessage"]] = relationship(
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="AskMessage.created_at",
+    )
+
+
+class AskMessage(Base):
+    __tablename__ = "ask_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(
+        ForeignKey("ask_conversations.id"), index=True
+    )
+    conversation: Mapped[AskConversation] = relationship(back_populates="messages")
+    role: Mapped[str] = mapped_column(String(16))  # "user" | "assistant"
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class ExpertChat(Base):
+    """A live "Connect an Expert" session, seeded from an AI answer."""
+
+    __tablename__ = "expert_chats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    requester_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    requester: Mapped[User] = relationship(foreign_keys=[requester_id])
+    expert_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    expert: Mapped[User | None] = relationship(foreign_keys=[expert_id])
+
+    subject: Mapped[str] = mapped_column(String(300))
+    # The AI exchange that prompted the user to reach for a human (context for the expert).
+    seed_question: Mapped[str | None] = mapped_column(Text, nullable=True)
+    seed_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    status: Mapped[ChatStatus] = mapped_column(
+        _status_col(ChatStatus), default=ChatStatus.WAITING
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="chat",
+        cascade="all, delete-orphan",
+        order_by="ChatMessage.created_at",
+    )
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chat_id: Mapped[int] = mapped_column(ForeignKey("expert_chats.id"), index=True)
+    chat: Mapped[ExpertChat] = relationship(back_populates="messages")
+    sender_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    sender: Mapped[User] = relationship()
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

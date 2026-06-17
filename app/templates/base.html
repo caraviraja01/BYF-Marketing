@@ -10,12 +10,12 @@
 <body>
 <div class="app">
   <aside class="sidebar">
-    <a class="brand" href="/">
+    <a class="brand" href="/dashboard">
       <span class="logo">BYF</span>
       <span class="brand-name">Beyond Your Finance</span>
     </a>
 
-    <a class="new-run-btn" href="/#new">+ New cycle</a>
+    <a class="new-run-btn" href="/dashboard#new">+ New cycle</a>
 
     <div class="side-section-label">History</div>
     <nav class="run-history">
@@ -37,9 +37,8 @@
     <div class="sidebar-foot">
       {% if llm_enabled %}<span class="badge live">● Live</span>
       {% else %}<span class="badge mock">● Mock</span>{% endif %}
-      {% if auth_enabled %}
-        <form method="post" action="/logout"><button class="linkbtn" type="submit">Log out</button></form>
-      {% endif %}
+      <a class="linkbtn" href="/ask">YourChartered.AI →</a>
+      <form method="post" action="/logout"><button class="linkbtn" type="submit">Log out</button></form>
     </div>
   </aside>
 

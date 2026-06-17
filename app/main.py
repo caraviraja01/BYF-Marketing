@@ -13,7 +13,9 @@ from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .ask_routes import router as ask_router
 from .brand import load_brand
+from .bootstrap import ensure_seed_accounts
 from .db import SessionLocal, get_session, init_db, reset_db
 from .llm import get_llm
 from .models import ContentItem, ItemStatus, PipelineRun
@@ -24,18 +26,25 @@ BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 settings = get_settings()
 
-app = FastAPI(title="Beyond Your Finance — Marketing Automation")
+app = FastAPI(title="YourChartered.AI — Beyond Your Finance")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 # Paths reachable without logging in (the cron task is token-protected instead).
-_PUBLIC_PREFIXES = ("/login", "/static", "/health", "/favicon", "/tasks/")
+_PUBLIC_PREFIXES = ("/login", "/signup", "/static", "/health", "/favicon", "/tasks/")
+# The marketing dashboard is firm-internal: admins only.
+_ADMIN_PREFIXES = ("/dashboard", "/runs", "/items")
 
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):
-    if settings.auth_enabled and not request.url.path.startswith(_PUBLIC_PREFIXES):
-        if not request.session.get("authed"):
+    path = request.url.path
+    if not path.startswith(_PUBLIC_PREFIXES):
+        if not request.session.get("user_id"):
             return RedirectResponse(url="/login", status_code=303)
+        # Keep the marketing dashboard restricted to admins.
+        if path.startswith(_ADMIN_PREFIXES) and request.session.get("role") != "admin":
+            role = request.session.get("role")
+            return RedirectResponse(url="/expert" if role == "expert" else "/ask", status_code=303)
     return await call_next(request)
 
 
@@ -49,11 +58,13 @@ app.add_middleware(
 )
 
 orchestrator = Orchestrator()
+app.include_router(ask_router)
 
 
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
+    ensure_seed_accounts()
 
 
 @app.get("/health")
@@ -88,33 +99,15 @@ def reset_database(token: str = "", confirm: str = ""):
     return {"status": "database reset"}
 
 
-@app.get("/login")
-def login_form(request: Request):
-    if not settings.auth_enabled or request.session.get("authed"):
-        return RedirectResponse(url="/", status_code=303)
-    return templates.TemplateResponse(
-        "login.html", {"request": request, "brand": load_brand(), "error": None}
-    )
-
-
-@app.post("/login")
-def login_submit(request: Request, username: str = Form(default=""), password: str = Form(default="")):
-    ok_user = hmac.compare_digest(username.strip(), settings.byf_auth_username)
-    ok_pass = hmac.compare_digest(password, settings.byf_auth_password or "")
-    if ok_user and ok_pass:
-        request.session["authed"] = True
-        return RedirectResponse(url="/", status_code=303)
-    return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "brand": load_brand(), "error": "Invalid username or password."},
-        status_code=401,
-    )
-
-
-@app.post("/logout")
-def logout(request: Request):
-    request.session.clear()
-    return RedirectResponse(url="/login", status_code=303)
+@app.get("/")
+def root(request: Request):
+    """Send each visitor to their home: admins to the dashboard, everyone else to the AI."""
+    role = request.session.get("role")
+    if role == "admin":
+        return RedirectResponse(url="/dashboard", status_code=303)
+    if role == "expert":
+        return RedirectResponse(url="/expert", status_code=303)
+    return RedirectResponse(url="/ask", status_code=303)
 
 
 def _ctx(request: Request, **extra) -> dict:
@@ -137,7 +130,7 @@ def _ctx(request: Request, **extra) -> dict:
     return ctx
 
 
-@app.get("/")
+@app.get("/dashboard")
 def dashboard(request: Request, session: Session = Depends(get_session)):
     runs = session.scalars(select(PipelineRun).order_by(PipelineRun.created_at.desc())).all()
     pending = session.scalars(

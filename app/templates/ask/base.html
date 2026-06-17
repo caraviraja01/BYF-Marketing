@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}YourChartered.AI{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  {% block head %}{% endblock %}
+</head>
+<body class="yc">
+  <header class="yc-topbar">
+    <a class="yc-logo" href="/ask">
+      <span class="logo">YC</span>
+      <span class="yc-logo-text">YourChartered<span class="muted">.AI</span></span>
+    </a>
+    <nav class="yc-nav">
+      <a href="/ask" class="{% block nav_ask %}{% endblock %}">Ask AI</a>
+      {% if user and user.is_expert %}
+        <a href="/expert" class="{% block nav_expert %}{% endblock %}">Expert Inbox</a>
+      {% endif %}
+      {% if llm_enabled %}<span class="badge live">● Live</span>{% else %}<span class="badge mock">● Preview</span>{% endif %}
+      {% if user %}
+        <span class="yc-user">{{ user.name }}</span>
+        <form method="post" action="/logout"><button class="linkbtn" type="submit">Log out</button></form>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="yc-main">{% block content %}{% endblock %}</main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

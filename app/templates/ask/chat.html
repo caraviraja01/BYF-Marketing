@@ -1,0 +1,174 @@
+{% extends "ask/base.html" %}
+{% block title %}Ask · YourChartered.AI{% endblock %}
+{% block nav_ask %}active{% endblock %}
+{% block content %}
+<div class="ask-shell" data-convo-id="{{ active.id if active else '' }}">
+
+  <aside class="ask-sidebar">
+    <form method="post" action="/ask/new"><button class="btn-primary block" type="submit">+ New question</button></form>
+    <div class="side-section-label">Your questions</div>
+    <nav class="ask-convos">
+      {% if not conversations %}
+        <p class="muted small empty">No questions yet. Ask your first one →</p>
+      {% else %}
+        {% for c in conversations %}
+          <a class="convo-link {% if active and c.id == active.id %}active{% endif %}" href="/ask/{{ c.id }}">
+            {{ c.title }}
+          </a>
+        {% endfor %}
+      {% endif %}
+    </nav>
+  </aside>
+
+  <section class="ask-thread">
+    <div class="ask-messages" id="messages">
+      {% if not active or not active.messages %}
+        <div class="ask-hero" id="hero">
+          <span class="logo big">YC</span>
+          <h1>Ask anything about finance, tax & accounting</h1>
+          <p class="muted">GST, Income Tax, fundraising, compliance, startup finance — get a clear answer,
+            then connect with a Beyond Your Finance expert if you want a human to take it further.</p>
+          <div class="suggestions">
+            <button class="chip" type="button">How is GST input tax credit claimed?</button>
+            <button class="chip" type="button">ELSS vs PPF for tax saving?</button>
+            <button class="chip" type="button">What should a startup keep ready for due diligence?</button>
+            <button class="chip" type="button">When must a company deduct TDS on professional fees?</button>
+          </div>
+        </div>
+      {% else %}
+        {% for m in active.messages %}
+          {% if m.role == 'user' %}
+            <div class="ask-msg user"><div class="bubble msg-md">{{ m.content }}</div></div>
+          {% else %}
+            <div class="ask-msg ai" data-mid="{{ m.id }}">
+              <div class="ai-head"><span class="logo tiny">YC</span> YourChartered.AI</div>
+              <div class="bubble msg-md">{{ m.content }}</div>
+              <div class="msg-actions">
+                <button type="button" class="act copy-btn">Copy</button>
+                <form method="post" action="/ask/connect" class="inline">
+                  <input type="hidden" name="conversation_id" value="{{ active.id }}" />
+                  <input type="hidden" name="message_id" value="{{ m.id }}" />
+                  <button type="submit" class="act connect-btn">💬 Connect an Expert</button>
+                </form>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+    </div>
+
+    <form class="ask-composer" id="composer">
+      <textarea id="q" name="question" rows="1" placeholder="Ask a finance, tax or accounting question…" required></textarea>
+      <button class="btn-primary" type="submit" id="send">Ask</button>
+    </form>
+    <p class="composer-note muted small">YourChartered.AI can be wrong — verify important details and connect an expert for advice specific to you.</p>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const shell = document.querySelector('.ask-shell');
+let convoId = shell.dataset.convoId || null;
+const messages = document.getElementById('messages');
+const composer = document.getElementById('composer');
+const q = document.getElementById('q');
+
+// Lightweight markdown: **bold**, "- " bullets, blank-line paragraphs.
+function fmt(text) {
+  const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines = text.split('\n');
+  let html = '', list = false;
+  for (let raw of lines) {
+    let line = esc(raw).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    if (/^\s*[-•]\s+/.test(raw)) {
+      if (!list) { html += '<ul>'; list = true; }
+      html += '<li>' + line.replace(/^\s*[-•]\s+/, '') + '</li>';
+    } else {
+      if (list) { html += '</ul>'; list = false; }
+      if (line.trim() === '') html += '<br>'; else html += '<p>' + line + '</p>';
+    }
+  }
+  if (list) html += '</ul>';
+  return html;
+}
+document.querySelectorAll('.msg-md').forEach(el => { el.innerHTML = fmt(el.textContent); });
+
+function scrollDown() { messages.scrollTop = messages.scrollHeight; }
+scrollDown();
+
+function addUser(text) {
+  const hero = document.getElementById('hero'); if (hero) hero.remove();
+  const el = document.createElement('div');
+  el.className = 'ask-msg user';
+  el.innerHTML = '<div class="bubble msg-md"></div>';
+  el.querySelector('.msg-md').innerHTML = fmt(text);
+  messages.appendChild(el); scrollDown();
+}
+
+function addAI(text, mid) {
+  const el = document.createElement('div');
+  el.className = 'ask-msg ai'; el.dataset.mid = mid;
+  el.innerHTML =
+    '<div class="ai-head"><span class="logo tiny">YC</span> YourChartered.AI</div>' +
+    '<div class="bubble msg-md"></div>' +
+    '<div class="msg-actions">' +
+      '<button type="button" class="act copy-btn">Copy</button>' +
+      '<form method="post" action="/ask/connect" class="inline">' +
+        '<input type="hidden" name="conversation_id" value="' + convoId + '">' +
+        '<input type="hidden" name="message_id" value="' + mid + '">' +
+        '<button type="submit" class="act connect-btn">💬 Connect an Expert</button>' +
+      '</form>' +
+    '</div>';
+  el.querySelector('.msg-md').innerHTML = fmt(text);
+  messages.appendChild(el); scrollDown();
+  wireActions(el);
+}
+
+function wireActions(scope) {
+  scope.querySelectorAll('.copy-btn').forEach(b => b.addEventListener('click', () => {
+    const text = b.closest('.ask-msg').querySelector('.msg-md').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const old = b.textContent; b.textContent = 'Copied ✓';
+      setTimeout(() => b.textContent = old, 1500);
+    });
+  }));
+}
+wireActions(document);
+
+async function send(text) {
+  addUser(text);
+  q.value = ''; q.style.height = 'auto';
+  const send = document.getElementById('send'); send.disabled = true;
+  const typing = document.createElement('div');
+  typing.className = 'ask-msg ai typing'; typing.innerHTML = '<div class="bubble msg-md">Thinking…</div>';
+  messages.appendChild(typing); scrollDown();
+  try {
+    const body = new URLSearchParams({ question: text });
+    if (convoId) body.set('conversation_id', convoId);
+    const res = await fetch('/ask/message', { method: 'POST', body });
+    typing.remove();
+    if (!res.ok) { addAI('Sorry — something went wrong. Please try again.', 0); return; }
+    const data = await res.json();
+    if (!convoId && data.conversation_id) {
+      convoId = String(data.conversation_id);
+      shell.dataset.convoId = convoId;
+      history.replaceState(null, '', '/ask/' + convoId);
+    }
+    addAI(data.answer, data.message_id);
+  } catch (e) {
+    typing.remove(); addAI('Network error — please try again.', 0);
+  } finally { send.disabled = false; q.focus(); }
+}
+
+composer.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const text = q.value.trim(); if (text) send(text);
+});
+q.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); composer.requestSubmit(); }
+});
+q.addEventListener('input', () => { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 160) + 'px'; });
+document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => send(c.textContent.trim())));
+</script>
+{% endblock %}

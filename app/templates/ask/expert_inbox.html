@@ -1,0 +1,74 @@
+{% extends "ask/base.html" %}
+{% block title %}Expert Inbox · YourChartered.AI{% endblock %}
+{% block nav_expert %}active{% endblock %}
+{% block content %}
+<div class="inbox">
+  <h1>Expert Inbox</h1>
+  <p class="muted">Live requests from people who asked the AI and want to talk to a human.</p>
+
+  <section class="inbox-col">
+    <h2>Waiting <span class="pill" id="waiting-count">{{ waiting|length }}</span></h2>
+    <div id="waiting-list" class="inbox-list">
+      {% if not waiting %}<p class="muted small empty">No one waiting right now.</p>{% endif %}
+      {% for c in waiting %}
+        <div class="inbox-card">
+          <div class="inbox-card-body">
+            <div class="inbox-subject">{{ c.subject }}</div>
+            <div class="muted small">from {{ c.requester.name }}</div>
+            {% if c.seed_question %}<div class="inbox-seed">“{{ c.seed_question[:160] }}”</div>{% endif %}
+          </div>
+          <form method="post" action="/expert/claim/{{ c.id }}">
+            <button class="btn-primary" type="submit">Claim & chat</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="inbox-col">
+    <h2>Your active chats <span class="pill">{{ mine|length }}</span></h2>
+    <div class="inbox-list">
+      {% if not mine %}<p class="muted small empty">No active conversations.</p>{% endif %}
+      {% for c in mine %}
+        <a class="inbox-card" href="/chat/{{ c.id }}">
+          <div class="inbox-card-body">
+            <div class="inbox-subject">{{ c.subject }}</div>
+            <div class="muted small">with {{ c.requester.name }} · {{ c.messages|length }} message(s)</div>
+          </div>
+          <span class="act">Open →</span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Live updates: refresh the waiting list when new requests arrive (WebSocket),
+// with a periodic poll as a safety net.
+function refresh() {
+  fetch('/expert/inbox.json').then(r => r.ok ? r.json() : null).then(data => {
+    if (!data) return;
+    document.getElementById('waiting-count').textContent = data.waiting.length;
+    const list = document.getElementById('waiting-list');
+    if (!data.waiting.length) { list.innerHTML = '<p class="muted small empty">No one waiting right now.</p>'; return; }
+    list.innerHTML = data.waiting.map(c =>
+      '<div class="inbox-card"><div class="inbox-card-body">' +
+      '<div class="inbox-subject">' + esc(c.subject) + '</div>' +
+      '<div class="muted small">from ' + esc(c.requester) + '</div></div>' +
+      '<form method="post" action="/expert/claim/' + c.id + '">' +
+      '<button class="btn-primary" type="submit">Claim &amp; chat</button></form></div>'
+    ).join('');
+  });
+}
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+try {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(proto + '://' + location.host + '/ws/lobby');
+  ws.onmessage = () => refresh();
+} catch (e) {}
+setInterval(refresh, 5000);
+</script>
+{% endblock %}

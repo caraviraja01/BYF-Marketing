@@ -1,0 +1,19 @@
+{% extends "ask/auth.html" %}
+{% block title %}Sign up · YourChartered.AI{% endblock %}
+{% block form %}
+<h1 class="auth-h1">Create your account</h1>
+<p class="muted small" style="margin-top:-2px">Ask unlimited finance, tax & accounting questions — free.</p>
+<form method="post" action="/signup" class="auth-form">
+  <label>Full name
+    <input type="text" name="name" autocomplete="name" required autofocus />
+  </label>
+  <label>Email
+    <input type="email" name="email" autocomplete="email" required />
+  </label>
+  <label>Password
+    <input type="password" name="password" autocomplete="new-password" minlength="6" required />
+  </label>
+  <button class="btn-primary" type="submit">Create account</button>
+</form>
+{% endblock %}
+{% block foot %}Already have an account? <a href="/login">Log in</a>{% endblock %}

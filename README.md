@@ -1,4 +1,36 @@
-# Beyond Your Finance — Marketing Automation
+# Beyond Your Finance — Platform
+
+This repo now hosts **two** products on one FastAPI + Claude stack:
+
+1. **YourChartered.AI** — a client- and public-facing **AI Q&A platform** for finance,
+   tax, accounting and startup questions. Every answer ends with the firm's compliance
+   disclaimer and offers **Copy** and **💬 Connect an Expert** buttons. "Connect an
+   Expert" opens a **live, WhatsApp-style chat** (WebSockets) with a Beyond Your Finance
+   chartered accountant.
+2. **Marketing Automation** — the firm-internal multi-agent content engine (below),
+   reachable at `/dashboard` for admins.
+
+## YourChartered.AI
+
+| Route | Who | What |
+|-------|-----|------|
+| `/signup`, `/login` | everyone | Account-based access (roles: user / expert / admin). |
+| `/ask` | users | ChatGPT-style threads answered live by Claude in the BYF voice. |
+| `/expert` | experts | Inbox of "Connect an Expert" requests — claim one to chat live. |
+| `/chat/{id}` | both | Real-time WhatsApp-style room over `ws://…/ws/chat/{id}`. |
+
+After login each role lands on its home (`/` redirects: admin → `/dashboard`, expert →
+`/expert`, everyone else → `/ask`). With no `ANTHROPIC_API_KEY` the assistant returns a
+useful on-brand placeholder so the whole flow is clickable offline.
+
+**Demo logins** (seeded automatically in non-production):
+`admin@byf.test` / `admin123` · `expert@byf.test` / `expert123` · `user@byf.test` / `user123`.
+In production, set `BYF_AUTH_USERNAME` / `BYF_AUTH_PASSWORD` to bootstrap the admin
+account, and let clients self-serve via `/signup`.
+
+---
+
+# Marketing Automation
 
 An end-to-end, multi-agent marketing engine for **Beyond Your Finance (BYF)**. Six
 specialised AI agents take a topic from market research all the way to a
