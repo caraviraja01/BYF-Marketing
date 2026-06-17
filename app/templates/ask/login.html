@@ -1,0 +1,16 @@
+{% extends "ask/auth.html" %}
+{% block title %}Log in · YourChartered.AI{% endblock %}
+{% block form %}
+<h1 class="auth-h1">Welcome back</h1>
+<p class="muted small" style="margin-top:-2px">Log in to ask the AI or answer as an expert.</p>
+<form method="post" action="/login" class="auth-form">
+  <label>Email
+    <input type="email" name="email" autocomplete="email" required autofocus />
+  </label>
+  <label>Password
+    <input type="password" name="password" autocomplete="current-password" required />
+  </label>
+  <button class="btn-primary" type="submit">Log in</button>
+</form>
+{% endblock %}
+{% block foot %}New here? <a href="/signup">Create an account</a>{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "ask/base.html" %}
+{% block title %}{{ chat.subject }} · Live chat{% endblock %}
+{% block content %}
+<div class="room" data-chat-id="{{ chat.id }}" data-me="{{ user.id }}">
+  <header class="room-head">
+    <div class="room-peer">
+      <span class="avatar">{{ (other.name[0] if other else '?')|upper }}</span>
+      <div>
+        <div class="room-peer-name">
+          {% if other %}{{ other.name }}{% elif user.id == chat.requester_id %}Connecting you to an expert…{% else %}{{ chat.requester.name }}{% endif %}
+        </div>
+        <div class="room-peer-sub muted small" id="room-status">
+          {% if chat.status.value == 'waiting' %}Waiting for an expert to join
+          {% elif chat.status.value == 'closed' %}Conversation ended
+          {% else %}{% if other and other.headline %}{{ other.headline }}{% else %}Online{% endif %}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% if chat.status.value != 'closed' %}
+    <form method="post" action="/chat/{{ chat.id }}/close" onsubmit="return confirm('End this conversation?')">
+      <button class="linkbtn" type="submit">End chat</button>
+    </form>
+    {% endif %}
+  </header>
+
+  {% if chat.seed_question or chat.seed_answer %}
+  <div class="room-context">
+    <div class="muted small">Started from an AI answer</div>
+    {% if chat.seed_question %}<div class="ctx-q"><strong>Q:</strong> {{ chat.seed_question[:300] }}</div>{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="room-messages" id="room-messages">
+    {% for m in chat.messages %}
+      <div class="chat-bubble {{ 'mine' if m.sender_id == user.id else 'theirs' }}">
+        <div class="chat-text"></div>
+        <span class="chat-time">{{ m.created_at.strftime('%H:%M') }}</span>
+        <span class="chat-raw" hidden>{{ m.body }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <form class="room-composer" id="room-composer" {% if chat.status.value == 'closed' %}data-closed="1"{% endif %}>
+    {% if chat.status.value == 'closed' %}
+      <div class="muted" style="padding:14px">This conversation has ended.</div>
+    {% else %}
+      <input id="room-input" autocomplete="off" placeholder="Type a message…" />
+      <button class="btn-primary" type="submit">Send</button>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const room = document.querySelector('.room');
+const chatId = room.dataset.chatId;
+const me = parseInt(room.dataset.me, 10);
+const list = document.getElementById('room-messages');
+const composer = document.getElementById('room-composer');
+const input = document.getElementById('room-input');
+
+// Server-rendered messages store raw text in .chat-raw to avoid HTML injection.
+list.querySelectorAll('.chat-bubble').forEach(b => {
+  b.querySelector('.chat-text').textContent = b.querySelector('.chat-raw').textContent;
+});
+function scrollDown() { list.scrollTop = list.scrollHeight; }
+scrollDown();
+
+function addBubble(msg) {
+  const el = document.createElement('div');
+  el.className = 'chat-bubble ' + (msg.sender_id === me ? 'mine' : 'theirs');
+  const t = document.createElement('div'); t.className = 'chat-text'; t.textContent = msg.body;
+  const time = document.createElement('span'); time.className = 'chat-time'; time.textContent = msg.at || '';
+  el.appendChild(t); el.appendChild(time);
+  list.appendChild(el); scrollDown();
+}
+
+let ws;
+if (!composer.dataset.closed) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(proto + '://' + location.host + '/ws/chat/' + chatId);
+  ws.onmessage = (ev) => {
+    const data = JSON.parse(ev.data);
+    if (data.type === 'message') {
+      addBubble(data);
+      const status = document.getElementById('room-status');
+      if (status && status.textContent.indexOf('Waiting') !== -1 && data.sender_id !== me) {
+        status.textContent = 'Online';
+      }
+    }
+  };
+  composer.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text || ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type: 'message', body: text }));
+    input.value = ''; input.focus();
+  });
+}
+</script>
+{% endblock %}

@@ -36,6 +36,33 @@ class LLMClient:
     def model_for(self, *, fast: bool = False) -> str:
         return self._settings.byf_fast_model if fast else self._settings.byf_model
 
+    def generate_text(
+        self,
+        *,
+        system: str,
+        messages: list[dict[str, str]] | None = None,
+        user: str | None = None,
+        fast: bool = False,
+        max_tokens: int = 1500,
+    ) -> str:
+        """Free-form text answer from Claude (used by the public Q&A assistant).
+
+        Pass either a single ``user`` string or a full ``messages`` list (so the
+        assistant can answer with conversation history). Raises :class:`LLMError`
+        in mock mode — callers must guard with ``enabled``.
+        """
+        if not self.enabled:
+            raise LLMError("LLM disabled (no ANTHROPIC_API_KEY); use the mock answer path.")
+        if messages is None:
+            messages = [{"role": "user", "content": user or ""}]
+        resp = self._client.messages.create(  # type: ignore[union-attr]
+            model=self.model_for(fast=fast),
+            max_tokens=max_tokens,
+            system=system,
+            messages=messages,
+        )
+        return "".join(block.text for block in resp.content if block.type == "text").strip()
+
     def generate_json(
         self,
         *,

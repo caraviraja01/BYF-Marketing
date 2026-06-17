@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}YourChartered.AI{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="yc">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="logo">YC</span>
+        <div>
+          <div class="auth-title">YourChartered.AI</div>
+          <div class="muted small">Finance · Tax · Accounting · Startups — by Beyond Your Finance</div>
+        </div>
+      </div>
+      {% if error %}<div class="flash warn">{{ error }}</div>{% endif %}
+      {% block form %}{% endblock %}
+    </div>
+    <p class="muted small auth-foot">{% block foot %}{% endblock %}</p>
+  </div>
+</body>
+</html>
